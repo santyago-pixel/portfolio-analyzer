@@ -199,6 +199,9 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
         st.write(f"🔍 Debug {asset}: {len(asset_ops)} operaciones")
         if not asset_ops.empty:
             st.write(asset_ops[['Tipo', 'Cantidad', 'Precio_Concertacion', 'Monto']])
+            
+            # Debug: mostrar cálculos paso a paso
+            st.write(f"🔍 Cálculos para {asset}:")
         
         # Calcular posición actual y precio promedio ponderado
         total_invested = 0
@@ -216,6 +219,11 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
                 total_quantity -= op['Cantidad']
                 # No afectamos weighted_price_sum para mantener precio promedio de compras
         
+        # Debug: mostrar resultados de cálculos
+        st.write(f"  - Total invertido: {total_invested}")
+        st.write(f"  - Cantidad total: {total_quantity}")
+        st.write(f"  - Suma ponderada: {weighted_price_sum}")
+        
         # Mostrar todos los activos que han tenido operaciones
         if total_invested != 0 or total_quantity != 0:  # Mostrar si hay inversión o cantidad
             # Calcular precio promedio ponderado
@@ -223,6 +231,11 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
                 avg_price = weighted_price_sum / total_quantity
             else:
                 avg_price = 0
+                
+            st.write(f"  - Precio promedio: {avg_price}")
+            st.write(f"  - ✅ Incluido en composición")
+        else:
+            st.write(f"  - ❌ NO incluido en composición")
             
             # Obtener precio actual
             asset_prices = calculator.precios[calculator.precios['Activo'] == asset]
