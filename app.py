@@ -198,7 +198,10 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
         # Debug: mostrar operaciones del activo
         st.write(f"🔍 Debug {asset}: {len(asset_ops)} operaciones")
         if not asset_ops.empty:
-            st.write(asset_ops[['Tipo', 'Cantidad', 'Precio_Concertacion', 'Monto']])
+            st.write("Operaciones completas:")
+            st.write(asset_ops)
+            st.write("Columnas disponibles:")
+            st.write(asset_ops.columns.tolist())
             
             # Debug: mostrar cálculos paso a paso
             st.write(f"🔍 Cálculos para {asset}:")
@@ -208,16 +211,22 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
         total_quantity = 0
         weighted_price_sum = 0  # Para calcular precio promedio ponderado
         
-        for _, op in asset_ops.iterrows():
+        for idx, op in asset_ops.iterrows():
+            st.write(f"  Procesando operación {idx}: {op['Tipo']} - Cantidad: {op['Cantidad']} - Precio: {op['Precio_Concertacion']} - Monto: {op['Monto']}")
+            
             if op['Tipo'] == 'Compra':
                 total_invested += op['Monto']
                 total_quantity += op['Cantidad']
                 # Acumular para precio promedio ponderado
                 weighted_price_sum += op['Cantidad'] * op['Precio_Concertacion']
+                st.write(f"    -> Compra: +{op['Monto']} invertido, +{op['Cantidad']} cantidad")
             elif op['Tipo'] == 'Venta':
                 # Para ventas, reducimos cantidad pero mantenemos el precio promedio
                 total_quantity -= op['Cantidad']
                 # No afectamos weighted_price_sum para mantener precio promedio de compras
+                st.write(f"    -> Venta: -{op['Cantidad']} cantidad")
+            else:
+                st.write(f"    -> Tipo '{op['Tipo']}' no procesado")
         
         # Debug: mostrar resultados de cálculos
         st.write(f"  - Total invertido: {total_invested}")
