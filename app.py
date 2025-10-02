@@ -179,8 +179,9 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
     if calculator.portfolio_data is None:
         calculator.portfolio_data = calculator.calculate_portfolio_value()
     
-    # Obtener activos únicos
+    # Obtener activos únicos y filtrar NaN
     assets = calculator.operaciones['Activo'].unique()
+    assets = [asset for asset in assets if pd.notna(asset)]  # Filtrar NaN
     
     # Debug: mostrar activos encontrados
     st.write(f"🔍 Debug: Activos encontrados: {len(assets)} - {list(assets)}")
@@ -209,8 +210,13 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
         # Debug: mostrar cálculos
         st.write(f"🔍 Debug: {asset} - Invertido: {total_invested:,.2f}, Cantidad: {total_quantity:,.0f}")
         
-        if total_quantity > 0:
-            avg_price = total_invested / total_quantity
+        # Mostrar todos los activos que han tenido operaciones
+        if total_invested != 0 or total_quantity != 0:  # Mostrar si hay inversión o cantidad
+            # Calcular precio promedio solo si hay cantidad
+            if total_quantity != 0:
+                avg_price = total_invested / total_quantity
+            else:
+                avg_price = 0
             
             # Obtener precio actual
             asset_prices = calculator.precios[calculator.precios['Activo'] == asset]
@@ -229,13 +235,26 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
                 composition_data.append({
                     'Activo': asset,
                     'Cantidad': f"{total_quantity:,.0f}",
-                    'Precio_Promedio': f"${avg_price:,.2f}",
+                    'Precio_Promedio': f"${avg_price:,.2f}" if avg_price > 0 else "N/A",
                     'Precio_Actual': f"${current_price:,.2f}",
                     'Valor_Actual': f"${current_value:,.2f}",
                     'Inversion_Total': f"${total_invested:,.2f}",
                     'Ganancia_Perdida': f"${gain_loss:,.2f}",
                     'Ganancia_Perdida_%': f"{gain_loss_pct:.2%}",
                     'Peso_Cartera': f"{weight:.2%}"
+                })
+            else:
+                # Si no hay datos de precios, mostrar solo la información básica
+                composition_data.append({
+                    'Activo': asset,
+                    'Cantidad': f"{total_quantity:,.0f}",
+                    'Precio_Promedio': f"${avg_price:,.2f}" if avg_price > 0 else "N/A",
+                    'Precio_Actual': "N/A",
+                    'Valor_Actual': f"${0:,.2f}",
+                    'Inversion_Total': f"${total_invested:,.2f}",
+                    'Ganancia_Perdida': f"${-total_invested:,.2f}",
+                    'Ganancia_Perdida_%': "-100.00%",
+                    'Peso_Cartera': "0.00%"
                 })
     
     if composition_data:
