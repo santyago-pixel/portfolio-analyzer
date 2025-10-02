@@ -152,22 +152,30 @@ class PortfolioCalculator:
         # Obtener valores de la cartera
         portfolio_data = self.portfolio_data.copy()
         
-        # Calcular rendimientos considerando que el valor inicial es la primera compra
+        # Calcular rendimientos considerando que el valor inicial es después de las compras del primer día
         returns = []
+        initial_value = None
         previous_value = None
         
         for i, row in portfolio_data.iterrows():
             current_value = row['Valor_Cartera']
             
-            if previous_value is None or previous_value == 0:
-                # Primer día o valor anterior cero
+            # El primer día con valor > 0 es nuestro valor inicial
+            if initial_value is None and current_value > 0:
+                initial_value = current_value
+                daily_return = 0.0  # Primer día = 0% rendimiento
+                previous_value = current_value
+            elif previous_value is None or previous_value == 0:
+                # Días sin activos en cartera
                 daily_return = 0.0
+                if current_value > 0:
+                    previous_value = current_value
             else:
-                # Calcular rendimiento diario
+                # Calcular rendimiento diario normal
                 daily_return = (current_value - previous_value) / previous_value
+                previous_value = current_value
             
             returns.append(daily_return)
-            previous_value = current_value
         
         # Crear DataFrame
         returns_df = pd.DataFrame({
@@ -179,6 +187,12 @@ class PortfolioCalculator:
         # Filtrar valores válidos (donde hay activos en cartera)
         returns_df = returns_df[returns_df['Valor_Cartera'] > 0].copy()
         
+        # Agregar valor inicial para referencia (usar el primer valor válido si initial_value es None)
+        if initial_value is None and not returns_df.empty:
+            initial_value = returns_df['Valor_Cartera'].iloc[0]
+        
+        returns_df['Valor_Inicial'] = initial_value if initial_value is not None else 0
+        
         self.daily_returns = returns_df
         return returns_df
     
@@ -189,10 +203,14 @@ class PortfolioCalculator:
         
         returns = self.daily_returns['Rendimiento_Diario']
         
+        # Obtener valores inicial y final
+        initial_value = self.daily_returns['Valor_Inicial'].iloc[0]
+        final_value = self.daily_returns['Valor_Cartera'].iloc[-1]
+        
         # Métricas básicas
-        total_return = (1 + returns).prod() - 1
+        total_return = (final_value - initial_value) / initial_value if initial_value > 0 else 0
         days = len(returns)
-        annualized_return = (1 + total_return) ** (252 / days) - 1
+        annualized_return = (1 + total_return) ** (252 / days) - 1 if days > 0 else 0
         
         # Volatilidad
         volatility = returns.std() * np.sqrt(252)
