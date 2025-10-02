@@ -88,35 +88,40 @@ class PortfolioCalculator:
                 if asset not in positions:
                     positions[asset] = {'cantidad': 0, 'precio_promedio': 0}
                 
-                if tipo in ['Compra', 'Cupón', 'Dividendo']:
-                    if tipo == 'Compra':
-                        # Actualizar posición
-                        old_qty = positions[asset]['cantidad']
-                        old_avg = positions[asset]['precio_promedio']
-                        
-                        new_qty = old_qty + cantidad
-                        if new_qty > 0:
-                            new_avg = (old_qty * old_avg + cantidad * precio) / new_qty
-                        else:
-                            new_avg = precio
-                        
-                        positions[asset]['cantidad'] = new_qty
-                        positions[asset]['precio_promedio'] = new_avg
+                if tipo == 'Compra':
+                    # Compra: ingresa monto a la cartera + se compra el activo
+                    # Actualizar posición del activo
+                    old_qty = positions[asset]['cantidad']
+                    old_avg = positions[asset]['precio_promedio']
+                    
+                    new_qty = old_qty + cantidad
+                    if new_qty > 0:
+                        new_avg = (old_qty * old_avg + cantidad * precio) / new_qty
                     else:
-                        # Cupón o dividendo - flujo de caja
-                        cash_flow += monto
-                
+                        new_avg = precio
+                    
+                    positions[asset]['cantidad'] = new_qty
+                    positions[asset]['precio_promedio'] = new_avg
+                    
+                    # No afecta cash_flow neto (ingresa monto, sale monto por compra)
+                    
                 elif tipo == 'Venta':
+                    # Venta: sale monto de la cartera + se vende el activo
                     # Reducir posición
                     positions[asset]['cantidad'] -= cantidad
-                    cash_flow += monto
+                    # No afecta cash_flow neto (ingresa monto por venta, sale monto de cartera)
+                
+                elif tipo in ['Cupón', 'Dividendo']:
+                    # Cupón/Dividendo: ingresa por cobro, luego sale de la cartera
+                    # No afecta cash_flow neto, pero es ganancia realizada
+                    pass
                 
                 elif tipo == 'Flujo':
-                    # Flujo de caja directo
+                    # Flujo de caja directo (aportes/retiros netos)
                     cash_flow += monto
             
-            # Calcular valor de la cartera
-            portfolio_value = cash_flow
+            # Calcular valor de la cartera (solo valor de mercado de activos)
+            portfolio_value = 0  # Empezar en 0, no incluir cash
             
             for asset, pos in positions.items():
                 if pos['cantidad'] > 0:
@@ -128,7 +133,8 @@ class PortfolioCalculator:
                     
                     if not asset_prices.empty:
                         current_price = asset_prices.iloc[-1]['Precio']
-                        portfolio_value += pos['cantidad'] * current_price
+                        asset_value = pos['cantidad'] * current_price
+                        portfolio_value += asset_value
             
             portfolio_values.append({
                 'Fecha': date,
@@ -143,19 +149,35 @@ class PortfolioCalculator:
         if self.portfolio_data is None:
             self.portfolio_data = self.calculate_portfolio_value()
         
-        # Calcular rendimientos diarios
-        portfolio_values = self.portfolio_data['Valor_Cartera'].values
+        # Obtener valores de la cartera
+        portfolio_data = self.portfolio_data.copy()
         
-        # Calcular rendimientos
-        returns = np.diff(portfolio_values) / portfolio_values[:-1]
-        returns = np.insert(returns, 0, 0)  # Primer día = 0
+        # Calcular rendimientos considerando que el valor inicial es la primera compra
+        returns = []
+        previous_value = None
+        
+        for i, row in portfolio_data.iterrows():
+            current_value = row['Valor_Cartera']
+            
+            if previous_value is None or previous_value == 0:
+                # Primer día o valor anterior cero
+                daily_return = 0.0
+            else:
+                # Calcular rendimiento diario
+                daily_return = (current_value - previous_value) / previous_value
+            
+            returns.append(daily_return)
+            previous_value = current_value
         
         # Crear DataFrame
         returns_df = pd.DataFrame({
-            'Fecha': self.portfolio_data['Fecha'],
+            'Fecha': portfolio_data['Fecha'],
             'Rendimiento_Diario': returns,
-            'Valor_Cartera': portfolio_values
+            'Valor_Cartera': portfolio_data['Valor_Cartera']
         })
+        
+        # Filtrar valores válidos (donde hay activos en cartera)
+        returns_df = returns_df[returns_df['Valor_Cartera'] > 0].copy()
         
         self.daily_returns = returns_df
         return returns_df
