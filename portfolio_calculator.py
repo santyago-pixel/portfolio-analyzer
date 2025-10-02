@@ -89,7 +89,7 @@ class PortfolioCalculator:
                 asset = op['Activo']
                 tipo = op['Tipo']
                 cantidad = op['Cantidad']
-                precio = op['Precio']
+                precio = op['Precio_Concertacion']
                 monto = op['Monto']
                 
                 if asset not in positions:
