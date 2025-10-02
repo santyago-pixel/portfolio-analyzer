@@ -387,6 +387,88 @@ def main():
                         )
                         st.plotly_chart(fig_attr, use_container_width=True)
                 
+                # Rendimiento Individual de Activos
+                st.header("📈 Rendimiento Individual por Activo")
+                
+                # Estadísticas resumidas por activo
+                asset_stats = calculator.get_asset_summary_stats()
+                if not asset_stats.empty:
+                    st.subheader("📊 Estadísticas por Activo")
+                    
+                    # Formatear las columnas para mejor visualización
+                    asset_stats_display = asset_stats.copy()
+                    percentage_cols = ['Rendimiento_Total', 'Rendimiento_Anualizado', 'Volatilidad_Anualizada', 
+                                     'Sharpe_Ratio', 'Rendimiento_Maximo', 'Rendimiento_Minimo']
+                    
+                    for col in percentage_cols:
+                        if col in asset_stats_display.columns:
+                            if col == 'Sharpe_Ratio':
+                                asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"{x:.3f}")
+                            else:
+                                asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"{x:.2%}")
+                    
+                    # Formatear precios
+                    price_cols = ['Precio_Inicial', 'Precio_Final', 'Precio_Maximo', 'Precio_Minimo']
+                    for col in price_cols:
+                        if col in asset_stats_display.columns:
+                            asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"${x:,.2f}")
+                    
+                    st.dataframe(asset_stats_display, use_container_width=True)
+                    
+                    # Gráfico de rendimientos por activo
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        fig_returns = px.bar(
+                            asset_stats,
+                            x='Activo',
+                            y='Rendimiento_Total',
+                            title="Rendimiento Total por Activo",
+                            color='Rendimiento_Total',
+                            color_continuous_scale=['red', 'yellow', 'green']
+                        )
+                        fig_returns.update_layout(yaxis_tickformat='.1%')
+                        st.plotly_chart(fig_returns, use_container_width=True)
+                    
+                    with col2:
+                        fig_sharpe = px.bar(
+                            asset_stats,
+                            x='Activo',
+                            y='Sharpe_Ratio',
+                            title="Sharpe Ratio por Activo",
+                            color='Sharpe_Ratio',
+                            color_continuous_scale=['red', 'yellow', 'green']
+                        )
+                        st.plotly_chart(fig_sharpe, use_container_width=True)
+                
+                # Performance histórica individual
+                individual_performance = calculator.calculate_individual_asset_performance()
+                if not individual_performance.empty:
+                    st.subheader("📈 Evolución de Rendimientos Acumulados")
+                    
+                    fig_individual = px.line(
+                        individual_performance,
+                        x='Fecha',
+                        y='Rendimiento_Acumulado',
+                        color='Activo',
+                        title="Rendimiento Acumulado por Activo",
+                        labels={'Rendimiento_Acumulado': 'Rendimiento Acumulado'}
+                    )
+                    fig_individual.update_layout(yaxis_tickformat='.1%')
+                    st.plotly_chart(fig_individual, use_container_width=True)
+                    
+                    # Comparación de precios
+                    st.subheader("💰 Evolución de Precios")
+                    fig_prices = px.line(
+                        individual_performance,
+                        x='Fecha',
+                        y='Precio',
+                        color='Activo',
+                        title="Evolución de Precios por Activo",
+                        labels={'Precio': 'Precio'}
+                    )
+                    st.plotly_chart(fig_prices, use_container_width=True)
+                
                 # Resumen de performance mensual
                 st.header("📅 Resumen Mensual")
                 monthly_summary = calculator.get_performance_summary()

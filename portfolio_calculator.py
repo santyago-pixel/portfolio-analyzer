@@ -282,29 +282,103 @@ class PortfolioCalculator:
             if total_quantity > 0:
                 avg_price = total_invested / total_quantity
                 
-                # Obtener precio actual
-                current_price = self.precios[
-                    self.precios['Activo'] == asset
-                ]['Precio'].iloc[-1]
-                
-                # Calcular retorno del activo
-                asset_return = (current_price - avg_price) / avg_price
-                
-                # Calcular contribución al portfolio
-                current_value = total_quantity * current_price
-                portfolio_value = self.portfolio_data['Valor_Cartera'].iloc[-1]
-                weight = current_value / portfolio_value if portfolio_value > 0 else 0
-                
-                attribution_data.append({
-                    'Activo': asset,
-                    'Peso': weight,
-                    'Retorno': asset_return,
-                    'Contribucion': weight * asset_return,
-                    'Valor_Actual': current_value,
-                    'Cantidad': total_quantity
-                })
+                # Obtener precio actual (verificar que existan datos)
+                asset_prices = self.precios[self.precios['Activo'] == asset]
+                if not asset_prices.empty:
+                    current_price = asset_prices['Precio'].iloc[-1]
+                    first_price = asset_prices['Precio'].iloc[0]
+                    
+                    # Calcular retorno del activo desde el inicio
+                    asset_return = (current_price - avg_price) / avg_price if avg_price > 0 else 0
+                    total_return = (current_price - first_price) / first_price if first_price > 0 else 0
+                    
+                    # Calcular contribución al portfolio
+                    current_value = total_quantity * current_price
+                    portfolio_value = self.portfolio_data['Valor_Cartera'].iloc[-1] if not self.portfolio_data.empty else 1
+                    weight = current_value / portfolio_value if portfolio_value > 0 else 0
+                    
+                    attribution_data.append({
+                        'Activo': asset,
+                        'Peso': weight,
+                        'Retorno_vs_Costo': asset_return,
+                        'Retorno_Total': total_return,
+                        'Contribucion': weight * asset_return,
+                        'Valor_Actual': current_value,
+                        'Precio_Promedio': avg_price,
+                        'Precio_Actual': current_price,
+                        'Precio_Inicial': first_price,
+                        'Cantidad': total_quantity,
+                        'Inversion_Total': total_invested
+                    })
         
         return pd.DataFrame(attribution_data)
+    
+    def calculate_individual_asset_performance(self) -> pd.DataFrame:
+        """Calcular rendimiento individual de cada activo a lo largo del tiempo"""
+        # Obtener activos únicos
+        assets = self.operaciones['Activo'].unique()
+        
+        # Crear DataFrame con fechas únicas
+        dates = self.precios['Fecha'].unique()
+        dates = sorted(dates)
+        
+        performance_data = []
+        
+        for asset in assets:
+            # Obtener precios del activo
+            asset_prices = self.precios[self.precios['Activo'] == asset].copy()
+            asset_prices = asset_prices.sort_values('Fecha')
+            
+            if not asset_prices.empty:
+                # Calcular rendimientos diarios
+                asset_prices['Rendimiento_Diario'] = asset_prices['Precio'].pct_change()
+                asset_prices['Rendimiento_Acumulado'] = (1 + asset_prices['Rendimiento_Diario']).cumprod() - 1
+                
+                # Agregar información del activo
+                for _, row in asset_prices.iterrows():
+                    performance_data.append({
+                        'Fecha': row['Fecha'],
+                        'Activo': asset,
+                        'Precio': row['Precio'],
+                        'Rendimiento_Diario': row['Rendimiento_Diario'],
+                        'Rendimiento_Acumulado': row['Rendimiento_Acumulado']
+                    })
+        
+        return pd.DataFrame(performance_data)
+    
+    def get_asset_summary_stats(self) -> pd.DataFrame:
+        """Obtener estadísticas resumidas de cada activo"""
+        individual_performance = self.calculate_individual_asset_performance()
+        
+        if individual_performance.empty:
+            return pd.DataFrame()
+        
+        summary_stats = []
+        
+        for asset in individual_performance['Activo'].unique():
+            asset_data = individual_performance[individual_performance['Activo'] == asset]
+            
+            if not asset_data.empty:
+                returns = asset_data['Rendimiento_Diario'].dropna()
+                
+                if len(returns) > 0:
+                    summary_stats.append({
+                        'Activo': asset,
+                        'Rendimiento_Total': asset_data['Rendimiento_Acumulado'].iloc[-1],
+                        'Rendimiento_Anualizado': (1 + asset_data['Rendimiento_Acumulado'].iloc[-1]) ** (252 / len(asset_data)) - 1,
+                        'Volatilidad_Anualizada': returns.std() * np.sqrt(252),
+                        'Sharpe_Ratio': (returns.mean() * 252) / (returns.std() * np.sqrt(252)) if returns.std() > 0 else 0,
+                        'Rendimiento_Maximo': returns.max(),
+                        'Rendimiento_Minimo': returns.min(),
+                        'Dias_Positivos': (returns > 0).sum(),
+                        'Dias_Negativos': (returns < 0).sum(),
+                        'Precio_Inicial': asset_data['Precio'].iloc[0],
+                        'Precio_Final': asset_data['Precio'].iloc[-1],
+                        'Precio_Maximo': asset_data['Precio'].max(),
+                        'Precio_Minimo': asset_data['Precio'].min()
+                    })
+        
+        return pd.DataFrame(summary_stats)
     
     def get_performance_summary(self) -> pd.DataFrame:
         """Resumen de performance por período"""
