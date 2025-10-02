@@ -377,19 +377,36 @@ class PortfolioCalculator:
             asset_prices = asset_prices.sort_values('Fecha')
             
             if not asset_prices.empty:
-                # Calcular rendimientos diarios
-                asset_prices['Rendimiento_Diario'] = asset_prices['Precio'].pct_change()
-                asset_prices['Rendimiento_Acumulado'] = (1 + asset_prices['Rendimiento_Diario']).cumprod() - 1
+                # Calcular precio promedio de compra del activo
+                asset_ops = self.operaciones[self.operaciones['Activo'] == asset]
+                total_invested = 0
+                total_quantity = 0
+                weighted_price_sum = 0
                 
-                # Agregar información del activo
-                for _, row in asset_prices.iterrows():
-                    performance_data.append({
-                        'Fecha': row['Fecha'],
-                        'Activo': asset,
-                        'Precio': row['Precio'],
-                        'Rendimiento_Diario': row['Rendimiento_Diario'],
-                        'Rendimiento_Acumulado': row['Rendimiento_Acumulado']
-                    })
+                for _, op in asset_ops.iterrows():
+                    tipo_limpio = str(op['Tipo']).strip()
+                    if tipo_limpio == 'Compra':
+                        total_invested += op['Monto']
+                        total_quantity += op['Cantidad']
+                        weighted_price_sum += op['Cantidad'] * op['Precio_Concertacion']
+                
+                if total_quantity > 0:
+                    avg_purchase_price = weighted_price_sum / total_quantity
+                    
+                    # Calcular rendimientos basados en precio promedio de compra
+                    asset_prices['Rendimiento_Diario'] = (asset_prices['Precio'] - avg_purchase_price) / avg_purchase_price
+                    asset_prices['Rendimiento_Acumulado'] = asset_prices['Rendimiento_Diario']  # Rendimiento total desde compra
+                    
+                    # Agregar información del activo
+                    for _, row in asset_prices.iterrows():
+                        performance_data.append({
+                            'Fecha': row['Fecha'],
+                            'Activo': asset,
+                            'Precio': row['Precio'],
+                            'Precio_Promedio_Compra': avg_purchase_price,
+                            'Rendimiento_Diario': row['Rendimiento_Diario'],
+                            'Rendimiento_Acumulado': row['Rendimiento_Acumulado']
+                        })
         
         return pd.DataFrame(performance_data)
     
