@@ -67,6 +67,13 @@ def load_data():
             type=['xlsx', 'xls'],
             help="El archivo debe contener dos hojas: 'Operaciones' y 'Precios'"
         )
+        
+        st.markdown("""
+        **📋 Formato requerido:**
+        
+        **Hoja 'Operaciones':** Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor
+        **Hoja 'Precios':** Fechas en columna A, activos en fila 1
+        """)
     
     with col2:
         if st.button("📊 Usar Datos de Ejemplo", type="secondary"):
@@ -74,21 +81,47 @@ def load_data():
     
     if uploaded_file is not None:
         try:
-            # Cargar operaciones
+            # Cargar operaciones (estructura: Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor)
             operaciones = pd.read_excel(uploaded_file, sheet_name='Operaciones')
             
-            # Cargar precios
+            # Mapear columnas a formato esperado
+            operaciones_mapped = pd.DataFrame()
+            operaciones_mapped['Fecha'] = operaciones['Fecha']
+            operaciones_mapped['Tipo'] = operaciones['Operacion']  # Compra/Venta
+            operaciones_mapped['Activo'] = operaciones['Activo']
+            operaciones_mapped['Cantidad'] = operaciones['Nominales']
+            operaciones_mapped['Precio'] = operaciones['Precio']
+            operaciones_mapped['Monto'] = operaciones['Valor']
+            
+            # Cargar precios (estructura: fechas en columna A, activos en fila 1)
             precios = pd.read_excel(uploaded_file, sheet_name='Precios')
             
+            # La primera columna debe ser las fechas
+            fecha_col = precios.columns[0]
+            precios = precios.rename(columns={fecha_col: 'Fecha'})
+            
+            # Convertir a formato largo (melt)
+            precios_long = precios.melt(
+                id_vars=['Fecha'], 
+                var_name='Activo', 
+                value_name='Precio'
+            )
+            precios_long = precios_long.dropna()  # Eliminar filas con NaN
+            
             st.session_state.use_sample_data = False
-            return operaciones, precios
+            return operaciones_mapped, precios_long
+            
         except Exception as e:
             st.error(f"Error al cargar el archivo: {str(e)}")
+            st.error("Verifica que el archivo tenga la estructura correcta:")
+            st.error("- Hoja 'Operaciones': Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor")
+            st.error("- Hoja 'Precios': Fechas en columna A, activos en fila 1")
             return None, None
     
     # Usar datos de ejemplo si está habilitado
     if st.session_state.get('use_sample_data', False):
-        operaciones, precios = generate_sample_data()
+        from example_data import generate_sample_data_with_your_structure
+        operaciones, precios = generate_sample_data_with_your_structure()
         st.success("✅ Datos de ejemplo cargados correctamente")
         return operaciones, precios
     

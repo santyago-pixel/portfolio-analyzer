@@ -24,11 +24,30 @@ class PortfolioCalculator:
         """Procesar y limpiar los datos de entrada"""
         # Convertir fechas
         self.operaciones['Fecha'] = pd.to_datetime(self.operaciones['Fecha'])
-        self.precios['Fecha'] = pd.to_datetime(self.precios['Fecha'])
         
-        # Ordenar por fecha
+        # Procesar precios (estructura: fechas en columna A, activos en fila 1)
+        if 'Fecha' in self.precios.columns:
+            # Formato original: Fecha, Activo, Precio
+            self.precios['Fecha'] = pd.to_datetime(self.precios['Fecha'])
+            self.precios = self.precios.sort_values('Fecha')
+        else:
+            # Formato nuevo: fechas en columna A, activos en fila 1
+            # La primera columna debe ser 'Fecha' o similar
+            fecha_col = self.precios.columns[0]  # Primera columna (fechas)
+            self.precios = self.precios.rename(columns={fecha_col: 'Fecha'})
+            self.precios['Fecha'] = pd.to_datetime(self.precios['Fecha'])
+            
+            # Convertir a formato largo (melt)
+            self.precios = self.precios.melt(
+                id_vars=['Fecha'], 
+                var_name='Activo', 
+                value_name='Precio'
+            )
+            self.precios = self.precios.dropna()  # Eliminar filas con NaN
+            self.precios = self.precios.sort_values('Fecha')
+        
+        # Ordenar operaciones por fecha
         self.operaciones = self.operaciones.sort_values('Fecha')
-        self.precios = self.precios.sort_values('Fecha')
         
         # Crear índice de fechas únicas
         self.date_range = pd.date_range(
