@@ -87,7 +87,7 @@ class PortfolioCalculator:
             
             for _, op in ops_until_date.iterrows():
                 asset = op['Activo']
-                tipo = op['Tipo']
+                tipo = str(op['Tipo']).strip()  # Limpiar espacios en blanco
                 cantidad = op['Cantidad']
                 precio = op['Precio_Concertacion']
                 monto = op['Monto']

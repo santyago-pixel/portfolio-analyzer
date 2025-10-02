@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import warnings
+import os
 warnings.filterwarnings('ignore')
 
 # Importar módulos personalizados
@@ -79,6 +80,14 @@ def load_data():
         if st.button("📊 Usar Datos de Ejemplo", type="secondary"):
             st.session_state.use_sample_data = True
     
+    # Buscar archivo Excel automáticamente
+    excel_files = [f for f in os.listdir('.') if f.endswith('.xlsx')]
+    if not uploaded_file and excel_files:
+        # Si hay archivos Excel en el directorio, usar el primero
+        excel_file = excel_files[0]
+        st.info(f"📁 Archivo Excel detectado: {excel_file}")
+        uploaded_file = open(excel_file, 'rb')
+    
     if uploaded_file is not None:
         try:
             # Cargar operaciones (estructura: Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor)
@@ -95,9 +104,6 @@ def load_data():
             
             # Filtrar filas válidas (eliminar NaN)
             operaciones_mapped = operaciones_mapped.dropna()
-            
-            st.write("🔍 Operaciones cargadas:")
-            st.write(operaciones_mapped.head(10))
             
             # Cargar precios (estructura: fechas en columna A, activos en fila 1)
             precios = pd.read_excel(uploaded_file, sheet_name='Precios')
@@ -195,16 +201,6 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
         # Obtener operaciones del activo
         asset_ops = calculator.operaciones[calculator.operaciones['Activo'] == asset]
         
-        # Debug: mostrar operaciones del activo
-        st.write(f"🔍 Debug {asset}: {len(asset_ops)} operaciones")
-        if not asset_ops.empty:
-            st.write("Operaciones completas:")
-            st.write(asset_ops)
-            st.write("Columnas disponibles:")
-            st.write(asset_ops.columns.tolist())
-            
-            # Debug: mostrar cálculos paso a paso
-            st.write(f"🔍 Cálculos para {asset}:")
         
         # Calcular posición actual y precio promedio ponderado
         total_invested = 0
@@ -212,26 +208,18 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
         weighted_price_sum = 0  # Para calcular precio promedio ponderado
         
         for idx, op in asset_ops.iterrows():
-            st.write(f"  Procesando operación {idx}: {op['Tipo']} - Cantidad: {op['Cantidad']} - Precio: {op['Precio_Concertacion']} - Monto: {op['Monto']}")
+            # Limpiar espacios en blanco del tipo de operación
+            tipo_limpio = str(op['Tipo']).strip()
             
-            if op['Tipo'] == 'Compra':
+            if tipo_limpio == 'Compra':
                 total_invested += op['Monto']
                 total_quantity += op['Cantidad']
                 # Acumular para precio promedio ponderado
                 weighted_price_sum += op['Cantidad'] * op['Precio_Concertacion']
-                st.write(f"    -> Compra: +{op['Monto']} invertido, +{op['Cantidad']} cantidad")
-            elif op['Tipo'] == 'Venta':
+            elif tipo_limpio == 'Venta':
                 # Para ventas, reducimos cantidad pero mantenemos el precio promedio
                 total_quantity -= op['Cantidad']
                 # No afectamos weighted_price_sum para mantener precio promedio de compras
-                st.write(f"    -> Venta: -{op['Cantidad']} cantidad")
-            else:
-                st.write(f"    -> Tipo '{op['Tipo']}' no procesado")
-        
-        # Debug: mostrar resultados de cálculos
-        st.write(f"  - Total invertido: {total_invested}")
-        st.write(f"  - Cantidad total: {total_quantity}")
-        st.write(f"  - Suma ponderada: {weighted_price_sum}")
         
         # Mostrar todos los activos que han tenido operaciones
         if total_invested != 0 or total_quantity != 0:  # Mostrar si hay inversión o cantidad
@@ -240,11 +228,6 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
                 avg_price = weighted_price_sum / total_quantity
             else:
                 avg_price = 0
-                
-            st.write(f"  - Precio promedio: {avg_price}")
-            st.write(f"  - ✅ Incluido en composición")
-        else:
-            st.write(f"  - ❌ NO incluido en composición")
             
             # Obtener precio actual
             asset_prices = calculator.precios[calculator.precios['Activo'] == asset]
