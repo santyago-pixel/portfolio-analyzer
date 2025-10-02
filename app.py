@@ -84,14 +84,63 @@ def load_data():
             # Cargar operaciones (estructura: Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor)
             operaciones = pd.read_excel(uploaded_file, sheet_name='Operaciones')
             
-            # Mapear columnas a formato esperado
-            operaciones_mapped = pd.DataFrame()
-            operaciones_mapped['Fecha'] = operaciones['Fecha']
-            operaciones_mapped['Tipo'] = operaciones['Operacion']  # Compra/Venta
-            operaciones_mapped['Activo'] = operaciones['Activo']
-            operaciones_mapped['Cantidad'] = operaciones['Nominales']
-            operaciones_mapped['Precio'] = operaciones['Precio']
-            operaciones_mapped['Monto'] = operaciones['Valor']
+            # Debug: mostrar estructura del archivo
+            st.write("🔍 Estructura del archivo detectada:")
+            st.write(f"Columnas: {operaciones.columns.tolist()}")
+            st.write(operaciones.head())
+            
+            # Crear lista para almacenar todas las operaciones
+            all_operations = []
+            
+            # Procesar cada fila que tenga datos válidos
+            for idx, row in operaciones.iterrows():
+                if pd.notna(row['Fecha']) and pd.notna(row['Operacion']):
+                    # Operación principal (columna 'Activo')
+                    if pd.notna(row['Activo']) and pd.notna(row['Nominales']) and pd.notna(row['Valor']):
+                        all_operations.append({
+                            'Fecha': row['Fecha'],
+                            'Tipo': row['Operacion'],
+                            'Activo': row['Activo'],
+                            'Cantidad': row['Nominales'],
+                            'Precio': row['Precio'],
+                            'Monto': row['Valor']
+                        })
+                    
+                    # Buscar operaciones adicionales en columnas no estándar
+                    for col in operaciones.columns:
+                        if col not in ['Fecha', 'Operacion', 'Tipo de activo', 'Activo', 'Nominales', 'Precio', 'Valor']:
+                            if pd.notna(row[col]) and str(row[col]).strip() not in ['', 'nan']:
+                                # Esta columna podría contener un activo
+                                activo_name = str(row[col]).strip()
+                                if activo_name in ['a', 'b', 'c', 'd', 'e']:  # Activos válidos
+                                    # Buscar cantidad y monto en la misma fila
+                                    cantidad = None
+                                    monto = None
+                                    
+                                    # Buscar en columnas adyacentes
+                                    for i, val in enumerate(row):
+                                        if pd.notna(val) and isinstance(val, (int, float)) and val > 0:
+                                            if cantidad is None:
+                                                cantidad = val
+                                            elif monto is None:
+                                                monto = val
+                                                break
+                                    
+                                    if cantidad is not None and monto is not None:
+                                        all_operations.append({
+                                            'Fecha': row['Fecha'],
+                                            'Tipo': row['Operacion'],
+                                            'Activo': activo_name,
+                                            'Cantidad': cantidad,
+                                            'Precio': monto / cantidad if cantidad > 0 else 0,
+                                            'Monto': monto
+                                        })
+            
+            # Crear DataFrame con todas las operaciones
+            operaciones_mapped = pd.DataFrame(all_operations)
+            
+            st.write("🔍 Operaciones procesadas:")
+            st.write(operaciones_mapped)
             
             # Cargar precios (estructura: fechas en columna A, activos en fila 1)
             precios = pd.read_excel(uploaded_file, sheet_name='Precios')
@@ -183,17 +232,11 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
     assets = calculator.operaciones['Activo'].unique()
     assets = [asset for asset in assets if pd.notna(asset)]  # Filtrar NaN
     
-    # Debug: mostrar activos encontrados
-    st.write(f"🔍 Debug: Activos encontrados: {len(assets)} - {list(assets)}")
-    
     composition_data = []
     
     for asset in assets:
         # Obtener operaciones del activo
         asset_ops = calculator.operaciones[calculator.operaciones['Activo'] == asset]
-        
-        # Debug: mostrar operaciones del activo
-        st.write(f"🔍 Debug: {asset} - {len(asset_ops)} operaciones")
         
         # Calcular posición actual y precio promedio
         total_invested = 0
@@ -206,9 +249,6 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
             elif op['Tipo'] == 'Venta':
                 total_invested -= op['Monto']
                 total_quantity -= op['Cantidad']
-        
-        # Debug: mostrar cálculos
-        st.write(f"🔍 Debug: {asset} - Invertido: {total_invested:,.2f}, Cantidad: {total_quantity:,.0f}")
         
         # Mostrar todos los activos que han tenido operaciones
         if total_invested != 0 or total_quantity != 0:  # Mostrar si hay inversión o cantidad
