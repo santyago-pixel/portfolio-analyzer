@@ -33,6 +33,13 @@ class PortfolioCalculator:
         if 'Valor' in self.operaciones.columns and 'Monto' not in self.operaciones.columns:
             self.operaciones['Monto'] = self.operaciones['Valor']
         
+        # Mapear precio de concertación si existe
+        if 'Precio_Concertacion' in self.operaciones.columns:
+            # Ya está mapeado correctamente
+            pass
+        elif 'Precio' in self.operaciones.columns:
+            self.operaciones['Precio_Concertacion'] = self.operaciones['Precio']
+        
         # Procesar precios (estructura: fechas en columna A, activos en fila 1)
         if 'Activo' in self.precios.columns and 'Precio' in self.precios.columns:
             # Formato largo: Fecha, Activo, Precio

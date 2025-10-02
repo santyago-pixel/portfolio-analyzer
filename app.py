@@ -84,63 +84,20 @@ def load_data():
             # Cargar operaciones (estructura: Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor)
             operaciones = pd.read_excel(uploaded_file, sheet_name='Operaciones')
             
-            # Debug: mostrar estructura del archivo
-            st.write("🔍 Estructura del archivo detectada:")
-            st.write(f"Columnas: {operaciones.columns.tolist()}")
-            st.write(operaciones.head())
+            # Mapear columnas a formato esperado
+            operaciones_mapped = pd.DataFrame()
+            operaciones_mapped['Fecha'] = operaciones['Fecha']
+            operaciones_mapped['Tipo'] = operaciones['Operacion']  # Compra/Venta/Cupón/Dividendo/Flujo
+            operaciones_mapped['Activo'] = operaciones['Activo']
+            operaciones_mapped['Cantidad'] = operaciones['Nominales']
+            operaciones_mapped['Precio_Concertacion'] = operaciones['Precio']  # Precio de la transacción
+            operaciones_mapped['Monto'] = operaciones['Valor']
             
-            # Crear lista para almacenar todas las operaciones
-            all_operations = []
+            # Filtrar filas válidas (eliminar NaN)
+            operaciones_mapped = operaciones_mapped.dropna()
             
-            # Procesar cada fila que tenga datos válidos
-            for idx, row in operaciones.iterrows():
-                if pd.notna(row['Fecha']) and pd.notna(row['Operacion']):
-                    # Operación principal (columna 'Activo')
-                    if pd.notna(row['Activo']) and pd.notna(row['Nominales']) and pd.notna(row['Valor']):
-                        all_operations.append({
-                            'Fecha': row['Fecha'],
-                            'Tipo': row['Operacion'],
-                            'Activo': row['Activo'],
-                            'Cantidad': row['Nominales'],
-                            'Precio': row['Precio'],
-                            'Monto': row['Valor']
-                        })
-                    
-                    # Buscar operaciones adicionales en columnas no estándar
-                    for col in operaciones.columns:
-                        if col not in ['Fecha', 'Operacion', 'Tipo de activo', 'Activo', 'Nominales', 'Precio', 'Valor']:
-                            if pd.notna(row[col]) and str(row[col]).strip() not in ['', 'nan']:
-                                # Esta columna podría contener un activo
-                                activo_name = str(row[col]).strip()
-                                if activo_name in ['a', 'b', 'c', 'd', 'e']:  # Activos válidos
-                                    # Buscar cantidad y monto en la misma fila
-                                    cantidad = None
-                                    monto = None
-                                    
-                                    # Buscar en columnas adyacentes
-                                    for i, val in enumerate(row):
-                                        if pd.notna(val) and isinstance(val, (int, float)) and val > 0:
-                                            if cantidad is None:
-                                                cantidad = val
-                                            elif monto is None:
-                                                monto = val
-                                                break
-                                    
-                                    if cantidad is not None and monto is not None:
-                                        all_operations.append({
-                                            'Fecha': row['Fecha'],
-                                            'Tipo': row['Operacion'],
-                                            'Activo': activo_name,
-                                            'Cantidad': cantidad,
-                                            'Precio': monto / cantidad if cantidad > 0 else 0,
-                                            'Monto': monto
-                                        })
-            
-            # Crear DataFrame con todas las operaciones
-            operaciones_mapped = pd.DataFrame(all_operations)
-            
-            st.write("🔍 Operaciones procesadas:")
-            st.write(operaciones_mapped)
+            st.write("🔍 Operaciones cargadas:")
+            st.write(operaciones_mapped.head(10))
             
             # Cargar precios (estructura: fechas en columna A, activos en fila 1)
             precios = pd.read_excel(uploaded_file, sheet_name='Precios')
@@ -238,23 +195,31 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
         # Obtener operaciones del activo
         asset_ops = calculator.operaciones[calculator.operaciones['Activo'] == asset]
         
-        # Calcular posición actual y precio promedio
+        # Calcular posición actual y precio promedio ponderado
         total_invested = 0
         total_quantity = 0
+        weighted_price_sum = 0  # Para calcular precio promedio ponderado
         
         for _, op in asset_ops.iterrows():
             if op['Tipo'] == 'Compra':
                 total_invested += op['Monto']
                 total_quantity += op['Cantidad']
+                # Acumular para precio promedio ponderado
+                weighted_price_sum += op['Cantidad'] * op['Precio_Concertacion']
             elif op['Tipo'] == 'Venta':
-                total_invested -= op['Monto']
+                # Para ventas, solo reducimos la cantidad, no afectamos la inversión total
                 total_quantity -= op['Cantidad']
+                # Recalcular precio promedio ponderado con cantidad restante
+                if total_quantity > 0:
+                    weighted_price_sum = total_invested  # Reiniciar cálculo
+                else:
+                    weighted_price_sum = 0
         
         # Mostrar todos los activos que han tenido operaciones
         if total_invested != 0 or total_quantity != 0:  # Mostrar si hay inversión o cantidad
-            # Calcular precio promedio solo si hay cantidad
-            if total_quantity != 0:
-                avg_price = total_invested / total_quantity
+            # Calcular precio promedio ponderado
+            if total_quantity > 0:
+                avg_price = weighted_price_sum / total_quantity
             else:
                 avg_price = 0
             
