@@ -377,36 +377,64 @@ class PortfolioCalculator:
             asset_prices = asset_prices.sort_values('Fecha')
             
             if not asset_prices.empty:
-                # Calcular precio promedio de compra del activo
-                asset_ops = self.operaciones[self.operaciones['Activo'] == asset]
+                # Calcular precio promedio de compra y rendimiento real del activo
+                asset_ops = self.operaciones[self.operaciones['Activo'] == asset].sort_values('Fecha')
+                
+                # Variables para tracking de posición
                 total_invested = 0
                 total_quantity = 0
                 weighted_price_sum = 0
+                realized_gains = 0  # Ganancias realizadas por ventas
                 
+                # Procesar operaciones históricamente
                 for _, op in asset_ops.iterrows():
                     tipo_limpio = str(op['Tipo']).strip()
                     if tipo_limpio == 'Compra':
                         total_invested += op['Monto']
                         total_quantity += op['Cantidad']
                         weighted_price_sum += op['Cantidad'] * op['Precio_Concertacion']
+                    elif tipo_limpio == 'Venta':
+                        # Calcular ganancia/pérdida de la venta
+                        if total_quantity > 0:
+                            avg_purchase_price = weighted_price_sum / total_quantity
+                            sale_gain = (op['Precio_Concertacion'] - avg_purchase_price) * op['Cantidad']
+                            realized_gains += sale_gain
+                        
+                        # Reducir posición
+                        total_quantity -= op['Cantidad']
+                        if total_quantity <= 0:
+                            # Si se vendió todo, reiniciar
+                            total_invested = 0
+                            weighted_price_sum = 0
                 
+                # Calcular precio promedio actual (solo para cantidad restante)
                 if total_quantity > 0:
                     avg_purchase_price = weighted_price_sum / total_quantity
+                else:
+                    avg_purchase_price = 0
+                
+                # Calcular rendimientos considerando ganancias realizadas
+                for _, row in asset_prices.iterrows():
+                    if avg_purchase_price > 0:
+                        # Rendimiento de la posición actual
+                        unrealized_return = (row['Precio'] - avg_purchase_price) / avg_purchase_price
+                        # Rendimiento total incluyendo ganancias realizadas
+                        total_return = unrealized_return + (realized_gains / total_invested) if total_invested > 0 else unrealized_return
+                    else:
+                        # Si no hay posición actual, solo ganancias realizadas
+                        total_return = realized_gains / total_invested if total_invested > 0 else 0
+                        unrealized_return = 0
                     
-                    # Calcular rendimientos basados en precio promedio de compra
-                    asset_prices['Rendimiento_Diario'] = (asset_prices['Precio'] - avg_purchase_price) / avg_purchase_price
-                    asset_prices['Rendimiento_Acumulado'] = asset_prices['Rendimiento_Diario']  # Rendimiento total desde compra
-                    
-                    # Agregar información del activo
-                    for _, row in asset_prices.iterrows():
-                        performance_data.append({
-                            'Fecha': row['Fecha'],
-                            'Activo': asset,
-                            'Precio': row['Precio'],
-                            'Precio_Promedio_Compra': avg_purchase_price,
-                            'Rendimiento_Diario': row['Rendimiento_Diario'],
-                            'Rendimiento_Acumulado': row['Rendimiento_Acumulado']
-                        })
+                    performance_data.append({
+                        'Fecha': row['Fecha'],
+                        'Activo': asset,
+                        'Precio': row['Precio'],
+                        'Precio_Promedio_Compra': avg_purchase_price if avg_purchase_price > 0 else 0,
+                        'Rendimiento_Diario': total_return,
+                        'Rendimiento_Acumulado': total_return,
+                        'Ganancias_Realizadas': realized_gains,
+                        'Cantidad_Actual': total_quantity
+                    })
         
         return pd.DataFrame(performance_data)
     
