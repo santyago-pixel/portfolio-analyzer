@@ -25,16 +25,26 @@ class PortfolioCalculator:
         # Convertir fechas
         self.operaciones['Fecha'] = pd.to_datetime(self.operaciones['Fecha'])
         
+        # Normalizar nombres de columnas de operaciones
+        if 'Operacion' in self.operaciones.columns and 'Tipo' not in self.operaciones.columns:
+            self.operaciones['Tipo'] = self.operaciones['Operacion']
+        if 'Nominales' in self.operaciones.columns and 'Cantidad' not in self.operaciones.columns:
+            self.operaciones['Cantidad'] = self.operaciones['Nominales']
+        if 'Valor' in self.operaciones.columns and 'Monto' not in self.operaciones.columns:
+            self.operaciones['Monto'] = self.operaciones['Valor']
+        
         # Procesar precios (estructura: fechas en columna A, activos en fila 1)
-        if 'Fecha' in self.precios.columns:
-            # Formato original: Fecha, Activo, Precio
+        if 'Activo' in self.precios.columns and 'Precio' in self.precios.columns:
+            # Formato largo: Fecha, Activo, Precio
             self.precios['Fecha'] = pd.to_datetime(self.precios['Fecha'])
             self.precios = self.precios.sort_values('Fecha')
         else:
-            # Formato nuevo: fechas en columna A, activos en fila 1
-            # La primera columna debe ser 'Fecha' o similar
-            fecha_col = self.precios.columns[0]  # Primera columna (fechas)
-            self.precios = self.precios.rename(columns={fecha_col: 'Fecha'})
+            # Formato ancho: fechas en columna A, activos en fila 1
+            # Asegurar que la primera columna sea 'Fecha'
+            if self.precios.columns[0] != 'Fecha':
+                fecha_col = self.precios.columns[0]  # Primera columna (fechas)
+                self.precios = self.precios.rename(columns={fecha_col: 'Fecha'})
+            
             self.precios['Fecha'] = pd.to_datetime(self.precios['Fecha'])
             
             # Convertir a formato largo (melt)
@@ -301,22 +311,25 @@ class PortfolioCalculator:
         if self.daily_returns is None:
             self.calculate_daily_returns()
         
+        # Crear columna de año-mes como string para evitar problemas con Period
+        self.daily_returns['Año_Mes'] = self.daily_returns['Fecha'].dt.strftime('%Y-%m')
+        
         # Agrupar por mes
-        monthly_returns = self.daily_returns.groupby(
-            self.daily_returns['Fecha'].dt.to_period('M')
-        )['Rendimiento_Diario'].apply(lambda x: (1 + x).prod() - 1)
+        monthly_returns = self.daily_returns.groupby('Año_Mes')['Rendimiento_Diario'].apply(
+            lambda x: (1 + x).prod() - 1
+        )
         
         # Calcular métricas mensuales
+        monthly_volatility = self.daily_returns.groupby('Año_Mes')['Rendimiento_Diario'].std() * np.sqrt(252)
+        
         monthly_metrics = pd.DataFrame({
             'Retorno_Mensual': monthly_returns,
-            'Volatilidad_Mensual': self.daily_returns.groupby(
-                self.daily_returns['Fecha'].dt.to_period('M')
-            )['Rendimiento_Diario'].std() * np.sqrt(252),
-            'Sharpe_Mensual': monthly_returns / (
-                self.daily_returns.groupby(
-                    self.daily_returns['Fecha'].dt.to_period('M')
-                )['Rendimiento_Diario'].std() * np.sqrt(252)
-            )
+            'Volatilidad_Mensual': monthly_volatility,
+            'Sharpe_Mensual': monthly_returns / monthly_volatility
         })
+        
+        # Convertir el índice a datetime para mejor visualización
+        monthly_metrics.index = pd.to_datetime(monthly_metrics.index + '-01')
+        monthly_metrics.index.name = 'Fecha'
         
         return monthly_metrics
