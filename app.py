@@ -174,6 +174,103 @@ def create_advanced_metrics(calculator: PortfolioCalculator, risk_free_rate: flo
         </div>
         """, unsafe_allow_html=True)
 
+def create_portfolio_composition(calculator: PortfolioCalculator):
+    """Crear sección de composición de la cartera"""
+    if calculator.portfolio_data is None:
+        calculator.portfolio_data = calculator.calculate_portfolio_value()
+    
+    # Obtener activos únicos
+    assets = calculator.operaciones['Activo'].unique()
+    
+    composition_data = []
+    
+    for asset in assets:
+        # Obtener operaciones del activo
+        asset_ops = calculator.operaciones[calculator.operaciones['Activo'] == asset]
+        
+        # Calcular posición actual y precio promedio
+        total_invested = 0
+        total_quantity = 0
+        
+        for _, op in asset_ops.iterrows():
+            if op['Tipo'] == 'Compra':
+                total_invested += op['Monto']
+                total_quantity += op['Cantidad']
+            elif op['Tipo'] == 'Venta':
+                total_invested -= op['Monto']
+                total_quantity -= op['Cantidad']
+        
+        if total_quantity > 0:
+            avg_price = total_invested / total_quantity
+            
+            # Obtener precio actual
+            asset_prices = calculator.precios[calculator.precios['Activo'] == asset]
+            if not asset_prices.empty and len(asset_prices) > 0:
+                current_price = asset_prices['Precio'].iloc[-1]
+                current_value = total_quantity * current_price
+                
+                # Calcular peso en la cartera
+                portfolio_value = calculator.portfolio_data['Valor_Cartera'].iloc[-1] if not calculator.portfolio_data.empty and len(calculator.portfolio_data) > 0 else 1
+                weight = current_value / portfolio_value if portfolio_value > 0 else 0
+                
+                # Calcular ganancia/pérdida
+                gain_loss = current_value - total_invested
+                gain_loss_pct = gain_loss / total_invested if total_invested > 0 else 0
+                
+                composition_data.append({
+                    'Activo': asset,
+                    'Cantidad': f"{total_quantity:,.0f}",
+                    'Precio_Promedio': f"${avg_price:,.2f}",
+                    'Precio_Actual': f"${current_price:,.2f}",
+                    'Valor_Actual': f"${current_value:,.2f}",
+                    'Inversion_Total': f"${total_invested:,.2f}",
+                    'Ganancia_Perdida': f"${gain_loss:,.2f}",
+                    'Ganancia_Perdida_%': f"{gain_loss_pct:.2%}",
+                    'Peso_Cartera': f"{weight:.2%}"
+                })
+    
+    if composition_data:
+        composition_df = pd.DataFrame(composition_data)
+        
+        st.subheader("📋 Composición de la Cartera")
+        
+        # Mostrar resumen
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            total_assets = len(composition_df)
+            st.metric("Total de Activos", total_assets)
+        
+        with col2:
+            total_invested = sum([float(x.replace('$', '').replace(',', '')) for x in composition_df['Inversion_Total']])
+            st.metric("Inversión Total", f"${total_invested:,.2f}")
+        
+        with col3:
+            total_current = sum([float(x.replace('$', '').replace(',', '')) for x in composition_df['Valor_Actual']])
+            st.metric("Valor Actual", f"${total_current:,.2f}")
+        
+        # Tabla detallada
+        st.dataframe(
+            composition_df,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Activo": st.column_config.TextColumn("Activo", width="medium"),
+                "Cantidad": st.column_config.TextColumn("Cantidad", width="small"),
+                "Precio_Promedio": st.column_config.TextColumn("Precio Promedio", width="medium"),
+                "Precio_Actual": st.column_config.TextColumn("Precio Actual", width="medium"),
+                "Valor_Actual": st.column_config.TextColumn("Valor Actual", width="medium"),
+                "Inversion_Total": st.column_config.TextColumn("Inversión Total", width="medium"),
+                "Ganancia_Perdida": st.column_config.TextColumn("Ganancia/Pérdida", width="medium"),
+                "Ganancia_Perdida_%": st.column_config.TextColumn("Ganancia/Pérdida %", width="medium"),
+                "Peso_Cartera": st.column_config.TextColumn("Peso en Cartera", width="medium")
+            }
+        )
+        
+        return composition_df
+    
+    return pd.DataFrame()
+
 def create_performance_chart(returns_df):
     """Crear gráfico de performance"""
     if returns_df is None:
@@ -352,6 +449,10 @@ def main():
                 # Métricas avanzadas
                 st.header("🔬 Métricas Avanzadas")
                 create_advanced_metrics(calculator, risk_free_rate)
+                
+                # Composición de la cartera
+                st.header("📋 Composición de la Cartera")
+                composition_df = create_portfolio_composition(calculator)
                 
                 # Gráficos
                 st.header("📊 Análisis Visual")
