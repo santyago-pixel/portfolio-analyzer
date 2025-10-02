@@ -182,11 +182,17 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
     # Obtener activos únicos
     assets = calculator.operaciones['Activo'].unique()
     
+    # Debug: mostrar activos encontrados
+    st.write(f"🔍 Debug: Activos encontrados: {len(assets)} - {list(assets)}")
+    
     composition_data = []
     
     for asset in assets:
         # Obtener operaciones del activo
         asset_ops = calculator.operaciones[calculator.operaciones['Activo'] == asset]
+        
+        # Debug: mostrar operaciones del activo
+        st.write(f"🔍 Debug: {asset} - {len(asset_ops)} operaciones")
         
         # Calcular posición actual y precio promedio
         total_invested = 0
@@ -199,6 +205,9 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
             elif op['Tipo'] == 'Venta':
                 total_invested -= op['Monto']
                 total_quantity -= op['Cantidad']
+        
+        # Debug: mostrar cálculos
+        st.write(f"🔍 Debug: {asset} - Invertido: {total_invested:,.2f}, Cantidad: {total_quantity:,.0f}")
         
         if total_quantity > 0:
             avg_price = total_invested / total_quantity
