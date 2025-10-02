@@ -324,7 +324,7 @@ class PortfolioCalculator:
                 
                 # Obtener precio actual (verificar que existan datos)
                 asset_prices = self.precios[self.precios['Activo'] == asset]
-                if not asset_prices.empty:
+                if not asset_prices.empty and len(asset_prices) > 0:
                     current_price = asset_prices['Precio'].iloc[-1]
                     first_price = asset_prices['Precio'].iloc[0]
                     
@@ -334,7 +334,7 @@ class PortfolioCalculator:
                     
                     # Calcular contribución al portfolio
                     current_value = total_quantity * current_price
-                    portfolio_value = self.portfolio_data['Valor_Cartera'].iloc[-1] if not self.portfolio_data.empty else 1
+                    portfolio_value = self.portfolio_data['Valor_Cartera'].iloc[-1] if not self.portfolio_data.empty and len(self.portfolio_data) > 0 else 1
                     weight = current_value / portfolio_value if portfolio_value > 0 else 0
                     
                     attribution_data.append({
