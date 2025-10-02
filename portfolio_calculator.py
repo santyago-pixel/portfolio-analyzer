@@ -415,15 +415,23 @@ class PortfolioCalculator:
                 
                 # Calcular rendimientos considerando ganancias realizadas
                 for _, row in asset_prices.iterrows():
-                    if avg_purchase_price > 0:
-                        # Rendimiento de la posición actual
-                        unrealized_return = (row['Precio'] - avg_purchase_price) / avg_purchase_price
-                        # Rendimiento total incluyendo ganancias realizadas
-                        total_return = unrealized_return + (realized_gains / total_invested) if total_invested > 0 else unrealized_return
+                    # Calcular rendimiento total del activo (incluyendo ventas realizadas)
+                    total_invested_original = 0
+                    total_quantity_original = 0
+                    
+                    # Recalcular inversión total original (solo compras)
+                    for _, op in asset_ops.iterrows():
+                        tipo_limpio = str(op['Tipo']).strip()
+                        if tipo_limpio == 'Compra':
+                            total_invested_original += op['Monto']
+                            total_quantity_original += op['Cantidad']
+                    
+                    if total_invested_original > 0:
+                        # Rendimiento total = (Valor actual + Ganancias realizadas - Inversión original) / Inversión original
+                        current_value = total_quantity * row['Precio'] if total_quantity > 0 else 0
+                        total_return = (current_value + realized_gains - total_invested_original) / total_invested_original
                     else:
-                        # Si no hay posición actual, solo ganancias realizadas
-                        total_return = realized_gains / total_invested if total_invested > 0 else 0
-                        unrealized_return = 0
+                        total_return = 0
                     
                     performance_data.append({
                         'Fecha': row['Fecha'],
@@ -433,7 +441,9 @@ class PortfolioCalculator:
                         'Rendimiento_Diario': total_return,
                         'Rendimiento_Acumulado': total_return,
                         'Ganancias_Realizadas': realized_gains,
-                        'Cantidad_Actual': total_quantity
+                        'Cantidad_Actual': total_quantity,
+                        'Valor_Actual': total_quantity * row['Precio'] if total_quantity > 0 else 0,
+                        'Inversion_Original': total_invested_original
                     })
         
         return pd.DataFrame(performance_data)
