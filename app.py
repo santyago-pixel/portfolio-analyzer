@@ -367,7 +367,7 @@ def create_returns_distribution(returns_df):
     return fig
 
 def main():
-    st.title("📊 HOLA Portfolio Analyzer")
+    st.title("📊 Portfolio Analyzer - CUPONES CORREGIDOS ✅")
     st.markdown("---")
     
     # Sidebar con configuración
