@@ -424,15 +424,21 @@ def main():
             (operaciones['Fecha'] <= pd.to_datetime(end_date))
         ]
         
+        # Crear calculador de cartera con TODOS los datos y fecha de inicio
+        calculator = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
+        
+        # Verificar si hay activos en cartera a la fecha de inicio
+        initial_positions = calculator._get_initial_positions(pd.to_datetime(start_date))
+        has_assets_in_portfolio = any(pos['cantidad'] > 0 for pos in initial_positions.values())
+        
         # Mostrar información del período filtrado
         if not operaciones_period.empty:
             st.info(f"📅 **Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} ({len(operaciones_period)} operaciones)")
+        elif has_assets_in_portfolio:
+            st.info(f"📅 **Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} (sin operaciones, pero con activos en cartera)")
         else:
-            st.warning(f"⚠️ No hay operaciones en el período seleccionado: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+            st.warning(f"⚠️ No hay operaciones ni activos en cartera en el período seleccionado: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
             return
-        
-        # Crear calculador de cartera con TODOS los datos y fecha de inicio
-        calculator = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
         
         # Calcular rendimientos diarios
         returns_df = calculator.calculate_daily_returns()
