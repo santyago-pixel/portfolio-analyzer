@@ -22,6 +22,22 @@ class PortfolioCalculator:
     
     def _process_data(self):
         """Procesar y limpiar los datos de entrada"""
+        # Debug: imprimir información sobre las operaciones cargadas
+        print(f"DEBUG: Total de operaciones cargadas: {len(self.operaciones)}")
+        print(f"DEBUG: Columnas disponibles: {list(self.operaciones.columns)}")
+        print(f"DEBUG: Primeras 10 operaciones:")
+        print(self.operaciones.head(10))
+        
+        # Debug específico: verificar la fila 7 (celdas B7 y G7 en Excel)
+        if len(self.operaciones) >= 7:
+            fila_7 = self.operaciones.iloc[6]  # Índice 6 = fila 7
+            print(f"DEBUG: Fila 7 (celdas B7-G7):")
+            print(f"  Tipo (columna B): '{fila_7.get('Tipo', 'N/A')}'")
+            print(f"  Monto (columna G): '{fila_7.get('Monto', 'N/A')}'")
+            print(f"  Fecha: '{fila_7.get('Fecha', 'N/A')}'")
+            print(f"  Activo: '{fila_7.get('Activo', 'N/A')}'")
+            print(f"  Fila completa: {fila_7.to_dict()}")
+        
         # Convertir fechas
         self.operaciones['Fecha'] = pd.to_datetime(self.operaciones['Fecha'])
         
