@@ -144,7 +144,13 @@ class PortfolioCalculator:
             
             # Calcular posición actual de cada activo
             # Empezar con las posiciones iniciales si existen
-            positions = initial_positions.copy()
+            positions = {}
+            for asset, pos in initial_positions.items():
+                positions[asset] = {
+                    'cantidad': pos['cantidad'],
+                    'precio_promedio': pos['precio_promedio']
+                }
+            
             cash_flow = 0
             
             for _, op in ops_until_date.iterrows():
@@ -212,6 +218,7 @@ class PortfolioCalculator:
                         current_price = asset_prices.iloc[-1]['Precio']
                         asset_value = pos['cantidad'] * current_price
                         portfolio_value += asset_value
+            
             
             portfolio_values.append({
                 'Fecha': date,
