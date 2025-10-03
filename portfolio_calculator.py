@@ -118,7 +118,7 @@ class PortfolioCalculator:
                     positions[asset]['cantidad'] -= cantidad
                     # No afecta cash_flow neto (ingresa monto por venta, sale monto de cartera)
                 
-                elif tipo.lower() in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend']:
+                elif any(keyword in tipo.lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
                     # Cupón/Dividendo: ingresa por cobro, luego sale de la cartera
                     # No afecta cash_flow neto, pero es ganancia realizada
                     # El monto se suma al rendimiento del activo y de la cartera
@@ -344,6 +344,9 @@ class PortfolioCalculator:
                 precio_op = op['Precio_Concertacion']
                 monto = op['Monto']
                 
+                # Debug: imprimir todas las operaciones para este activo
+                print(f"DEBUG: Procesando operación para {asset}: Tipo='{tipo}' (lower='{tipo.lower()}'), Monto={monto}, Fecha={op['Fecha']}")
+                
                 if tipo == 'Compra':
                     total_invested += monto
                     current_quantity += cantidad
@@ -364,7 +367,7 @@ class PortfolioCalculator:
                         # Ajustar suma ponderada proporcionalmente
                         weighted_price_sum = (weighted_price_sum / (current_quantity + cantidad)) * current_quantity
                 
-                elif tipo.lower() in ['cupón', 'cupon', 'dividendo', 'cupon', 'coupon', 'dividend']:
+                elif any(keyword in tipo.lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
                     # Cupón/Dividendo: se suma al rendimiento del activo
                     # No afecta la cantidad ni el precio promedio
                     coupon_dividend_income += monto
@@ -464,7 +467,7 @@ class PortfolioCalculator:
                 daily_ops = asset_ops[asset_ops['Fecha'] == current_date]
                 daily_purchases = daily_ops[daily_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
                 daily_sales = daily_ops[daily_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-                daily_coupons = daily_ops[daily_ops['Tipo'].str.strip().str.lower().isin(['cupón', 'cupon', 'dividendo', 'coupon', 'dividend'])]['Monto'].sum()
+                daily_coupons = daily_ops[daily_ops['Tipo'].str.strip().str.lower().str.contains('|'.join(['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']), na=False)]['Monto'].sum()
                 daily_cash_flow = daily_purchases - daily_sales - daily_coupons
                 
                 if previous_value is None and current_value > 0:
