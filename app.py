@@ -537,7 +537,7 @@ def main():
                         attribution_display[col] = attribution_display[col].apply(lambda x: f"{x:.2%}")
                 
                 # Formatear precios
-                price_cols = ['Valor_Actual', 'Precio_Promedio', 'Precio_Actual', 'Ganancias_Realizadas', 'Ingresos_Cupones_Dividendos', 'Ganancias_No_Realizadas', 'Inversion_Total']
+                price_cols = ['Valor_Actual', 'Precio_Promedio', 'Precio_Actual', 'Ganancias_Realizadas', 'Ingresos_Cupones_Dividendos', 'Amortizaciones', 'Ganancias_No_Realizadas', 'Inversion_Total']
                 for col in price_cols:
                     if col in attribution_display.columns:
                         attribution_display[col] = attribution_display[col].apply(lambda x: f"${x:,.2f}")

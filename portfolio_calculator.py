@@ -351,6 +351,7 @@ class PortfolioCalculator:
             weighted_price_sum = 0  # Suma ponderada para precio promedio
             realized_gains = 0  # Ganancias realizadas acumuladas
             coupon_dividend_income = 0  # Ingresos por cupones y dividendos
+            amortizations = 0  # Amortizaciones (salida de capital, no ganancia realizada)
             
             # Procesar operaciones históricamente
             for _, op in asset_ops.iterrows():
@@ -387,10 +388,10 @@ class PortfolioCalculator:
                     coupon_dividend_income += monto
                 
                 elif any(keyword in tipo.strip().lower() for keyword in ['amortización', 'amortizacion', 'amortization']):
-                    # Amortización: no modifica el nominal, se suma como ganancia realizada
+                    # Amortización: no modifica el nominal, es una salida de capital
+                    # NO es una ganancia realizada, se contabiliza por separado
                     # Es un outflow para la cartera (salida de dinero)
-                    # Se suma a las ganancias realizadas
-                    realized_gains += monto
+                    amortizations += monto
             
             if current_quantity > 0:
                 # Calcular precio promedio actual
@@ -433,6 +434,7 @@ class PortfolioCalculator:
                         'Ganancias_Realizadas': total_realized_gains,
                         'Ganancias_No_Realizadas': unrealized_gain,
                         'Ingresos_Cupones_Dividendos': coupon_dividend_income,
+                        'Amortizaciones': amortizations,
                         'Inversion_Total': total_invested
                     })
         
@@ -547,6 +549,7 @@ class PortfolioCalculator:
                 weighted_price_sum = 0
                 realized_gains = 0  # Ganancias realizadas por ventas
                 coupon_dividend_income = 0  # Ingresos por cupones y dividendos
+                amortizations = 0  # Amortizaciones (salida de capital, no ganancia realizada)
                 
                 # Procesar operaciones históricamente
                 for _, op in asset_ops.iterrows():
@@ -575,10 +578,10 @@ class PortfolioCalculator:
                         coupon_dividend_income += op['Monto']
                     
                     elif any(keyword in tipo_limpio.lower() for keyword in ['amortización', 'amortizacion', 'amortization']):
-                        # Amortización: no modifica el nominal, se suma como ganancia realizada
+                        # Amortización: no modifica el nominal, es una salida de capital
+                        # NO es una ganancia realizada, se contabiliza por separado
                         # Es un outflow para la cartera (salida de dinero)
-                        # Se suma a las ganancias realizadas
-                        realized_gains += op['Monto']
+                        amortizations += op['Monto']
                 
                 # Calcular precio promedio actual (solo para cantidad restante)
                 if total_quantity > 0:
@@ -626,6 +629,7 @@ class PortfolioCalculator:
                         'Rendimiento_Acumulado': total_return,
                         'Ganancias_Realizadas': total_realized_gains,
                         'Ingresos_Cupones_Dividendos': coupon_dividend_income,
+                        'Amortizaciones': amortizations,
                         'Cantidad_Actual': total_quantity,
                         'Valor_Actual': total_quantity * row['Precio'] if total_quantity > 0 else 0,
                         'Inversion_Original': total_invested_original
