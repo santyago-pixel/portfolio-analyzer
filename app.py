@@ -611,11 +611,13 @@ def main():
                     )
                     fig_individual.update_layout(yaxis_tickformat='.1%')
                     st.plotly_chart(fig_individual, use_container_width=True)
-                    
-                    # Comparación de precios
+                
+                # Comparación de precios (usar función original que incluye precios)
+                individual_prices = calculator.calculate_individual_asset_performance()
+                if not individual_prices.empty:
                     st.subheader("💰 Evolución de Precios")
                     fig_prices = px.line(
-                        individual_performance,
+                        individual_prices,
                         x='Fecha',
                         y='Precio',
                         color='Activo',
