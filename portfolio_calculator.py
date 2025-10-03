@@ -118,7 +118,7 @@ class PortfolioCalculator:
                     positions[asset]['cantidad'] -= cantidad
                     # No afecta cash_flow neto (ingresa monto por venta, sale monto de cartera)
                 
-                elif tipo in ['Cupón', 'Dividendo']:
+                elif tipo in ['Cupón', 'Cupon', 'Dividendo']:
                     # Cupón/Dividendo: ingresa por cobro, luego sale de la cartera
                     # No afecta cash_flow neto, pero es ganancia realizada
                     # El monto se suma al rendimiento del activo y de la cartera
@@ -176,7 +176,7 @@ class PortfolioCalculator:
             daily_operations = self.operaciones[self.operaciones['Fecha'] == current_date]
             daily_purchases = daily_operations[daily_operations['Tipo'].str.strip() == 'Compra']['Monto'].sum()
             daily_sales = daily_operations[daily_operations['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-            daily_coupons = daily_operations[daily_operations['Tipo'].str.strip().isin(['Cupón', 'Dividendo'])]['Monto'].sum()
+            daily_coupons = daily_operations[daily_operations['Tipo'].str.strip().isin(['Cupón', 'Cupon', 'Dividendo'])]['Monto'].sum()
             daily_cash_flow = daily_purchases - daily_sales - daily_coupons
             
             # El primer día con valor > 0 es nuestro valor inicial
@@ -369,7 +369,7 @@ class PortfolioCalculator:
                         # Ajustar suma ponderada proporcionalmente
                         weighted_price_sum = (weighted_price_sum / (current_quantity + cantidad)) * current_quantity
                 
-                elif tipo in ['Cupón', 'Dividendo']:
+                elif tipo in ['Cupón', 'Cupon', 'Dividendo']:
                     # Cupón/Dividendo: se suma al rendimiento del activo
                     # No afecta la cantidad ni el precio promedio
                     coupon_dividend_income += monto
@@ -463,7 +463,7 @@ class PortfolioCalculator:
                 daily_ops = asset_ops[asset_ops['Fecha'] == current_date]
                 daily_purchases = daily_ops[daily_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
                 daily_sales = daily_ops[daily_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-                daily_coupons = daily_ops[daily_ops['Tipo'].str.strip().isin(['Cupón', 'Dividendo'])]['Monto'].sum()
+                daily_coupons = daily_ops[daily_ops['Tipo'].str.strip().isin(['Cupón', 'Cupon', 'Dividendo'])]['Monto'].sum()
                 daily_cash_flow = daily_purchases - daily_sales - daily_coupons
                 
                 if previous_value is None and current_value > 0:
@@ -546,7 +546,7 @@ class PortfolioCalculator:
                             total_invested = 0
                             weighted_price_sum = 0
                     
-                    elif tipo_limpio in ['Cupón', 'Dividendo']:
+                    elif tipo_limpio in ['Cupón', 'Cupon', 'Dividendo']:
                         # Cupón/Dividendo: se suma al rendimiento del activo
                         # No afecta la cantidad ni el precio promedio
                         coupon_dividend_income += op['Monto']
