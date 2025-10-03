@@ -210,12 +210,9 @@ class PortfolioCalculator:
         
         returns = self.daily_returns['Rendimiento_Diario']
         
-        # Obtener valores inicial y final
-        initial_value = self.daily_returns['Valor_Inicial'].iloc[0]
-        final_value = self.daily_returns['Valor_Cartera'].iloc[-1]
-        
-        # Métricas básicas
-        total_return = (final_value - initial_value) / initial_value if initial_value > 0 else 0
+        # Calcular rendimiento total usando rendimientos diarios acumulados
+        # Esto considera todas las compras/ventas realizadas
+        total_return = (1 + returns).prod() - 1
         days = len(returns)
         annualized_return = (1 + total_return) ** (252 / days) - 1 if days > 0 else 0
         
