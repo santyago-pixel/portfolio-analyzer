@@ -575,15 +575,16 @@ def main():
                         st.plotly_chart(fig_returns, use_container_width=True)
                     
                     with col2:
-                        fig_sharpe = px.bar(
+                        fig_contribution = px.bar(
                             asset_stats,
                             x='Activo',
-                            y='Sharpe_Ratio',
-                            title="Sharpe Ratio por Activo",
-                            color='Sharpe_Ratio',
+                            y='Contribucion',
+                            title="Contribución al Portfolio por Activo",
+                            color='Contribucion',
                             color_continuous_scale=['red', 'yellow', 'green']
                         )
-                        st.plotly_chart(fig_sharpe, use_container_width=True)
+                        fig_contribution.update_layout(yaxis_tickformat='.1%')
+                        st.plotly_chart(fig_contribution, use_container_width=True)
                 
                 # Performance histórica individual
                 individual_performance = calculator.calculate_individual_asset_performance()
