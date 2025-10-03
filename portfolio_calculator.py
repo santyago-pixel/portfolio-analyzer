@@ -393,50 +393,52 @@ class PortfolioCalculator:
                     # Es un outflow para la cartera (salida de dinero)
                     amortizations += monto
             
-            if current_quantity > 0:
-                # Calcular precio promedio actual
+            # Incluir todos los activos que tuvieron operaciones, incluso si ya fueron vendidos completamente
+            if total_invested > 0:  # Solo incluir si hubo inversión en el activo
+                # Calcular precio promedio de compra (solo para activos que aún tienen cantidad)
                 avg_purchase_price = weighted_price_sum / current_quantity if current_quantity > 0 else 0
                 
                 # Obtener precio actual (verificar que existan datos)
                 asset_prices = self.precios[self.precios['Activo'] == asset]
+                current_price = 0
                 if not asset_prices.empty and len(asset_prices) > 0:
                     current_price = asset_prices['Precio'].iloc[-1]
-                    
-                    # Calcular valor actual de la posición
-                    current_value = current_quantity * current_price
-                    
-                    # Calcular ganancia/pérdida no realizada
-                    unrealized_gain = current_value - (current_quantity * avg_purchase_price)
-                    
-                    # Calcular ganancia total (realizada + no realizada + cupones/dividendos + amortizaciones)
-                    total_gain = realized_gains + unrealized_gain + coupon_dividend_income + amortizations
-                    
-                    # Calcular retorno total
-                    total_return = total_gain / total_invested if total_invested > 0 else 0
-                    
-                    # Calcular contribución al portfolio
-                    portfolio_value = self.portfolio_data['Valor_Cartera'].iloc[-1] if not self.portfolio_data.empty and len(self.portfolio_data) > 0 else 1
-                    weight = current_value / portfolio_value if portfolio_value > 0 else 0
-                    
-                    # Incluir cupones/dividendos en las ganancias realizadas para mostrar el impacto total
-                    total_realized_gains = realized_gains + coupon_dividend_income
-                    
-                    attribution_data.append({
-                        'Activo': asset,
-                        'Peso': weight,
-                        'Retorno_vs_Costo': total_return,
-                        'Retorno_Total': total_return,
-                        'Contribucion': weight * total_return,
-                        'Valor_Actual': current_value,
-                        'Precio_Promedio': avg_purchase_price,
-                        'Precio_Actual': current_price,
-                        'Cantidad': current_quantity,
-                        'Ganancias_Realizadas': total_realized_gains,
-                        'Ganancias_No_Realizadas': unrealized_gain,
-                        'Ingresos_Cupones_Dividendos': coupon_dividend_income,
-                        'Amortizaciones': amortizations,
-                        'Inversion_Total': total_invested
-                    })
+                
+                # Calcular valor actual de la posición
+                current_value = current_quantity * current_price
+                
+                # Calcular ganancia/pérdida no realizada (solo si hay cantidad actual)
+                unrealized_gain = current_value - (current_quantity * avg_purchase_price) if current_quantity > 0 else 0
+                
+                # Calcular ganancia total (realizada + no realizada + cupones/dividendos + amortizaciones)
+                total_gain = realized_gains + unrealized_gain + coupon_dividend_income + amortizations
+                
+                # Calcular retorno total
+                total_return = total_gain / total_invested if total_invested > 0 else 0
+                
+                # Calcular contribución al portfolio
+                portfolio_value = self.portfolio_data['Valor_Cartera'].iloc[-1] if not self.portfolio_data.empty and len(self.portfolio_data) > 0 else 1
+                weight = current_value / portfolio_value if portfolio_value > 0 else 0
+                
+                # Incluir cupones/dividendos en las ganancias realizadas para mostrar el impacto total
+                total_realized_gains = realized_gains + coupon_dividend_income
+                
+                attribution_data.append({
+                    'Activo': asset,
+                    'Peso': weight,
+                    'Retorno_vs_Costo': total_return,
+                    'Retorno_Total': total_return,
+                    'Contribucion': weight * total_return,
+                    'Valor_Actual': current_value,
+                    'Precio_Promedio': avg_purchase_price,
+                    'Precio_Actual': current_price,
+                    'Cantidad': current_quantity,
+                    'Ganancias_Realizadas': total_realized_gains,
+                    'Ganancias_No_Realizadas': unrealized_gain,
+                    'Ingresos_Cupones_Dividendos': coupon_dividend_income,
+                    'Amortizaciones': amortizations,
+                    'Inversion_Total': total_invested
+                })
         
         return pd.DataFrame(attribution_data)
     
