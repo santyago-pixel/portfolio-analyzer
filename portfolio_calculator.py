@@ -407,6 +407,87 @@ class PortfolioCalculator:
         
         return pd.DataFrame(attribution_data)
     
+    def calculate_asset_cumulative_returns(self) -> pd.DataFrame:
+        """Calcular rendimientos acumulados por activo excluyendo flujos de cash"""
+        if self.portfolio_data is None:
+            self.portfolio_data = self.calculate_portfolio_value()
+        
+        # Obtener activos únicos
+        assets = self.operaciones['Activo'].unique()
+        assets = [asset for asset in assets if pd.notna(asset)]
+        
+        asset_returns_data = []
+        
+        for asset in assets:
+            # Obtener operaciones del activo
+            asset_ops = self.operaciones[self.operaciones['Activo'] == asset].sort_values('Fecha')
+            
+            # Obtener precios del activo
+            asset_prices = self.precios[self.precios['Activo'] == asset].sort_values('Fecha')
+            
+            if asset_prices.empty:
+                continue
+            
+            # Calcular rendimientos diarios del activo excluyendo flujos de cash
+            returns = []
+            dates = []
+            previous_value = None
+            initial_value = None
+            
+            for _, row in asset_prices.iterrows():
+                current_date = row['Fecha']
+                current_price = row['Precio']
+                
+                # Calcular cantidad actual del activo en esta fecha
+                current_quantity = 0
+                for _, op in asset_ops.iterrows():
+                    if op['Fecha'] <= current_date:
+                        if str(op['Tipo']).strip() == 'Compra':
+                            current_quantity += op['Cantidad']
+                        elif str(op['Tipo']).strip() == 'Venta':
+                            current_quantity -= op['Cantidad']
+                
+                current_quantity = max(0, current_quantity)  # No puede ser negativo
+                current_value = current_quantity * current_price
+                
+                # Calcular flujos de cash del día para este activo
+                daily_ops = asset_ops[asset_ops['Fecha'] == current_date]
+                daily_purchases = daily_ops[daily_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
+                daily_sales = daily_ops[daily_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
+                daily_cash_flow = daily_purchases - daily_sales
+                
+                if previous_value is None and current_value > 0:
+                    initial_value = current_value
+                    daily_return = 0.0
+                    previous_value = current_value
+                elif previous_value is None or previous_value == 0:
+                    daily_return = 0.0
+                    if current_value > 0:
+                        previous_value = current_value
+                else:
+                    # Calcular rendimiento excluyendo flujos de cash
+                    value_without_cash_flow = current_value - daily_cash_flow
+                    daily_return = (value_without_cash_flow - previous_value) / previous_value
+                    previous_value = current_value
+                
+                returns.append(daily_return)
+                dates.append(current_date)
+            
+            # Calcular rendimiento acumulado
+            if returns:
+                cumulative_returns = [(1 + r) for r in returns]
+                cumulative_return = 1.0
+                for i, cr in enumerate(cumulative_returns):
+                    cumulative_return *= cr
+                    asset_returns_data.append({
+                        'Fecha': dates[i],
+                        'Activo': asset,
+                        'Rendimiento_Diario': returns[i],
+                        'Rendimiento_Acumulado': cumulative_return - 1
+                    })
+        
+        return pd.DataFrame(asset_returns_data)
+    
     def calculate_individual_asset_performance(self) -> pd.DataFrame:
         """Calcular rendimiento individual de cada activo a lo largo del tiempo"""
         # Obtener activos únicos

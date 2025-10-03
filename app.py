@@ -597,7 +597,7 @@ def main():
                         st.plotly_chart(fig_contribution, use_container_width=True)
                 
                 # Performance histórica individual
-                individual_performance = calculator.calculate_individual_asset_performance()
+                individual_performance = calculator.calculate_asset_cumulative_returns()
                 if not individual_performance.empty:
                     st.subheader("📈 Evolución de Rendimientos Acumulados")
                     
@@ -606,7 +606,7 @@ def main():
                         x='Fecha',
                         y='Rendimiento_Acumulado',
                         color='Activo',
-                        title="Rendimiento Acumulado por Activo",
+                        title="Rendimiento Acumulado por Activo (Sin Flujos de Cash)",
                         labels={'Rendimiento_Acumulado': 'Rendimiento Acumulado'}
                     )
                     fig_individual.update_layout(yaxis_tickformat='.1%')
