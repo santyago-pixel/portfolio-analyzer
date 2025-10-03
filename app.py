@@ -119,8 +119,14 @@ def load_data():
             operaciones_mapped['Precio_Concertacion'] = operaciones['Precio']  # Precio de la transacción
             operaciones_mapped['Monto'] = operaciones['Valor']
             
-            # Filtrar filas válidas (eliminar NaN)
+            # Filtrar filas válidas (eliminar NaN pero mantener filas con 'nan' como string)
+            # Primero convertir 'nan' strings a NaN reales
+            operaciones_mapped['Tipo'] = operaciones_mapped['Tipo'].replace('nan', np.nan)
             operaciones_mapped = operaciones_mapped.dropna()
+            
+            # Debug: mostrar operaciones después del filtrado
+            st.write("**🔍 DEBUG - Operaciones después del filtrado:**")
+            st.dataframe(operaciones_mapped)
             
             # Cargar precios (estructura: fechas en columna A, activos en fila 1)
             precios = pd.read_excel(uploaded_file, sheet_name='Precios')
