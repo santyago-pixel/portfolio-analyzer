@@ -394,6 +394,9 @@ class PortfolioCalculator:
                     portfolio_value = self.portfolio_data['Valor_Cartera'].iloc[-1] if not self.portfolio_data.empty and len(self.portfolio_data) > 0 else 1
                     weight = current_value / portfolio_value if portfolio_value > 0 else 0
                     
+                    # Incluir cupones/dividendos en las ganancias realizadas para mostrar el impacto total
+                    total_realized_gains = realized_gains + coupon_dividend_income
+                    
                     attribution_data.append({
                         'Activo': asset,
                         'Peso': weight,
@@ -404,7 +407,7 @@ class PortfolioCalculator:
                         'Precio_Promedio': avg_purchase_price,
                         'Precio_Actual': current_price,
                         'Cantidad': current_quantity,
-                        'Ganancias_Realizadas': realized_gains,
+                        'Ganancias_Realizadas': total_realized_gains,
                         'Ganancias_No_Realizadas': unrealized_gain,
                         'Ingresos_Cupones_Dividendos': coupon_dividend_income,
                         'Inversion_Total': total_invested
@@ -573,14 +576,25 @@ class PortfolioCalculator:
                     else:
                         total_return = 0
                     
+                    # Incluir cupones/dividendos en las ganancias realizadas para mostrar el impacto total
+                    total_realized_gains = realized_gains + coupon_dividend_income
+                    
+                    # Calcular rendimiento diario real (cambio de precio del activo)
+                    if len(performance_data) > 0:
+                        # Obtener precio anterior
+                        previous_price = performance_data[-1]['Precio']
+                        daily_return = (row['Precio'] - previous_price) / previous_price if previous_price > 0 else 0
+                    else:
+                        daily_return = 0  # Primer día
+                    
                     performance_data.append({
                         'Fecha': row['Fecha'],
                         'Activo': asset,
                         'Precio': row['Precio'],
                         'Precio_Promedio_Compra': avg_purchase_price if avg_purchase_price > 0 else 0,
-                        'Rendimiento_Diario': total_return,
+                        'Rendimiento_Diario': daily_return,
                         'Rendimiento_Acumulado': total_return,
-                        'Ganancias_Realizadas': realized_gains,
+                        'Ganancias_Realizadas': total_realized_gains,
                         'Ingresos_Cupones_Dividendos': coupon_dividend_income,
                         'Cantidad_Actual': total_quantity,
                         'Valor_Actual': total_quantity * row['Precio'] if total_quantity > 0 else 0,
