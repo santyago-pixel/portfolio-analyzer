@@ -681,10 +681,14 @@ def main():
                     
                     with col3:
                         if 'Rendimiento_Diario' in returns_df.columns:
-                            # Calcular rendimiento total acumulado usando rendimientos diarios
+                            # Calcular rendimiento total basado en inversión total real vs valor final
                             # Esto considera todas las compras/ventas realizadas
-                            cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
-                            st.metric("Rendimiento Total", f"{cumulative_return:.2%}")
+                            total_invested = calculator.operaciones[calculator.operaciones['Tipo'].str.strip() == 'Compra']['Monto'].sum()
+                            total_sales = calculator.operaciones[calculator.operaciones['Tipo'].str.strip() == 'Venta']['Monto'].sum()
+                            net_invested = total_invested - total_sales
+                            final_value = returns_df['Valor_Cartera'].iloc[-1]
+                            total_return = (final_value - net_invested) / net_invested if net_invested > 0 else 0
+                            st.metric("Rendimiento Total", f"{total_return:.2%}")
                 else:
                     st.warning("No hay datos de rendimientos disponibles.")
     
