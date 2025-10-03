@@ -63,11 +63,17 @@ def load_data():
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        uploaded_file = st.file_uploader(
-            "Selecciona tu archivo Excel",
-            type=['xlsx', 'xls'],
-            help="El archivo debe contener dos hojas: 'Operaciones' y 'Precios'"
-        )
+        # Intentar cargar automáticamente el archivo operaciones.xlsx
+        default_file = "operaciones.xlsx"
+        if os.path.exists(default_file):
+            st.success(f"✅ Archivo encontrado: {default_file}")
+            uploaded_file = default_file
+        else:
+            uploaded_file = st.file_uploader(
+                "Selecciona tu archivo Excel",
+                type=['xlsx', 'xls'],
+                help="El archivo debe contener dos hojas: 'Operaciones' y 'Precios'"
+            )
         
         st.markdown("""
         **📋 Formato requerido:**
