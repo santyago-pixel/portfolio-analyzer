@@ -274,70 +274,6 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
                     'Peso_Cartera': "0.00%"
                 })
     
-    # Mostrar métricas principales
-    st.header("📈 Métricas de Performance")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        # Calcular rendimiento total usando la misma fórmula que la última sección
-        if 'Rendimiento_Diario' in returns_df.columns:
-            cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
-        else:
-            cumulative_return = metrics['total_return'] # Fallback if no daily returns
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">Rendimiento Total</div>
-            <div class="metric-value {'positive' if cumulative_return > 0 else 'negative'}">
-                {cumulative_return:.2%}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">Rendimiento Anualizado</div>
-            <div class="metric-value {'positive' if metrics['annualized_return'] > 0 else 'negative'}">
-                {metrics['annualized_return']:.2%}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">Volatilidad</div>
-            <div class="metric-value">
-                {metrics['volatility']:.2%}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">Sharpe Ratio</div>
-            <div class="metric-value {'positive' if metrics['sharpe_ratio'] > 0 else 'negative'}">
-                {metrics['sharpe_ratio']:.2f}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Métricas avanzadas
-    st.header("🔬 Métricas Avanzadas")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("Sortino Ratio", f"{metrics['sortino_ratio']:.2f}")
-    with col2:
-        st.metric("Calmar Ratio", f"{metrics['calmar_ratio']:.2f}")
-    with col3:
-        st.metric("Max Drawdown", f"{metrics['max_drawdown']:.2%}")
-    with col4:
-        st.metric("VaR (95%)", f"{metrics['var_95']:.2%}")
-
     if composition_data:
         composition_df = pd.DataFrame(composition_data)
         
@@ -463,6 +399,74 @@ def main():
         returns_df = calculator.calculate_daily_returns()
         
         if returns_df is not None:
+            # Calcular métricas
+            metrics = calculator.calculate_metrics(risk_free_rate)
+            
+            if metrics is not None:
+                # Mostrar métricas principales
+                st.header("📈 Métricas de Performance")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    # Calcular rendimiento total usando la misma fórmula que la última sección
+                    if 'Rendimiento_Diario' in returns_df.columns:
+                        cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
+                    else:
+                        cumulative_return = metrics['total_return'] # Fallback if no daily returns
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Rendimiento Total</div>
+                        <div class="metric-value {'positive' if cumulative_return > 0 else 'negative'}">
+                            {cumulative_return:.2%}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Rendimiento Anualizado</div>
+                        <div class="metric-value {'positive' if metrics['annualized_return'] > 0 else 'negative'}">
+                            {metrics['annualized_return']:.2%}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col3:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Volatilidad</div>
+                        <div class="metric-value">
+                            {metrics['volatility']:.2%}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col4:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Sharpe Ratio</div>
+                        <div class="metric-value {'positive' if metrics['sharpe_ratio'] > 0 else 'negative'}">
+                            {metrics['sharpe_ratio']:.2f}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Métricas avanzadas
+                st.header("🔬 Métricas Avanzadas")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric("Sortino Ratio", f"{metrics['sortino_ratio']:.2f}")
+                with col2:
+                    st.metric("Calmar Ratio", f"{metrics['calmar_ratio']:.2f}")
+                with col3:
+                    st.metric("Max Drawdown", f"{metrics['max_drawdown']:.2%}")
+                with col4:
+                    st.metric("VaR (95%)", f"{metrics['var_95']:.2%}")
+            
             # Análisis Visual
             st.header("📊 Análisis Visual")
             
