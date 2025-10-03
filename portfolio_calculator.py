@@ -166,6 +166,7 @@ class PortfolioCalculator:
         
         for i, row in portfolio_data.iterrows():
             current_value = row['Valor_Cartera']
+            current_date = row['Fecha']
             
             # El primer día con valor > 0 es nuestro valor inicial
             if initial_value is None and current_value > 0:
@@ -178,9 +179,18 @@ class PortfolioCalculator:
                 if current_value > 0:
                     previous_value = current_value
             else:
-                # Calcular rendimiento diario normal
-                daily_return = (current_value - previous_value) / previous_value
-                previous_value = current_value
+                # Verificar si hubo compras en este día
+                daily_operations = self.operaciones[self.operaciones['Fecha'] == current_date]
+                daily_purchases = daily_operations[daily_operations['Tipo'].str.strip() == 'Compra']['Monto'].sum()
+                
+                if daily_purchases > 0:
+                    # Si hubo compras, el rendimiento es 0 (las compras no son rendimiento)
+                    daily_return = 0.0
+                    previous_value = current_value
+                else:
+                    # Calcular rendimiento diario normal (solo por movimiento de precios)
+                    daily_return = (current_value - previous_value) / previous_value
+                    previous_value = current_value
             
             returns.append(daily_return)
         
