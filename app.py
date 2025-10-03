@@ -119,10 +119,17 @@ def load_data():
             operaciones_mapped['Precio_Concertacion'] = operaciones['Precio']  # Precio de la transacción
             operaciones_mapped['Monto'] = operaciones['Valor']
             
-            # Filtrar filas válidas (eliminar NaN pero mantener filas con 'nan' como string)
+            # Filtrar filas válidas (eliminar NaN pero mantener cupones que pueden tener NaN en cantidad/precio)
             # Primero convertir 'nan' strings a NaN reales
             operaciones_mapped['Tipo'] = operaciones_mapped['Tipo'].replace('nan', np.nan)
-            operaciones_mapped = operaciones_mapped.dropna()
+            
+            # Para cupones, llenar NaN en cantidad y precio con 0
+            cupon_mask = operaciones_mapped['Tipo'].str.strip().str.lower().str.contains('cupon', na=False)
+            operaciones_mapped.loc[cupon_mask, 'Cantidad'] = operaciones_mapped.loc[cupon_mask, 'Cantidad'].fillna(0)
+            operaciones_mapped.loc[cupon_mask, 'Precio_Concertacion'] = operaciones_mapped.loc[cupon_mask, 'Precio_Concertacion'].fillna(0)
+            
+            # Ahora eliminar filas con NaN en columnas críticas
+            operaciones_mapped = operaciones_mapped.dropna(subset=['Fecha', 'Tipo', 'Activo', 'Monto'])
             
             # Debug: mostrar operaciones después del filtrado
             st.write("**🔍 DEBUG - Operaciones después del filtrado:**")
