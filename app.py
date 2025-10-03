@@ -493,6 +493,24 @@ def main():
             # Análisis de Atribución
             st.header("🎯 Análisis de Atribución")
             
+            # Debug temporal: mostrar información sobre cupones detectados
+            st.subheader("🔍 Debug - Cupones Detectados")
+            debug_info = []
+            for _, op in operaciones.iterrows():
+                if any(keyword in str(op['Tipo']).lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
+                    debug_info.append({
+                        'Fecha': op['Fecha'],
+                        'Tipo': op['Tipo'],
+                        'Activo': op['Activo'],
+                        'Monto': op['Monto']
+                    })
+            
+            if debug_info:
+                st.write("**Cupones/Dividendos encontrados:**")
+                st.dataframe(pd.DataFrame(debug_info))
+            else:
+                st.warning("⚠️ No se encontraron operaciones de cupones/dividendos")
+            
             # Calcular análisis de atribución
             attribution = calculator.calculate_attribution_analysis()
             
