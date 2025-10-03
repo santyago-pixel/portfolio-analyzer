@@ -411,6 +411,7 @@ class PortfolioCalculator:
                         'Cantidad': current_quantity,
                         'Ganancias_Realizadas': realized_gains,
                         'Ganancias_No_Realizadas': unrealized_gain,
+                        'Ingresos_Cupones_Dividendos': coupon_dividend_income,
                         'Inversion_Total': total_invested
                     })
         
@@ -585,6 +586,7 @@ class PortfolioCalculator:
                         'Rendimiento_Diario': total_return,
                         'Rendimiento_Acumulado': total_return,
                         'Ganancias_Realizadas': realized_gains,
+                        'Ingresos_Cupones_Dividendos': coupon_dividend_income,
                         'Cantidad_Actual': total_quantity,
                         'Valor_Actual': total_quantity * row['Precio'] if total_quantity > 0 else 0,
                         'Inversion_Original': total_invested_original

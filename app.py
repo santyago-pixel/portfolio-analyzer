@@ -370,25 +370,7 @@ def main():
     st.title("📊 Portfolio Analyzer")
     st.markdown("---")
     
-    # Sidebar para configuración
-    with st.sidebar:
-        st.header("⚙️ Configuración")
-        
-        # Tasa libre de riesgo
-        risk_free_rate = st.number_input(
-            "Tasa Libre de Riesgo (%)",
-            min_value=0.0,
-            max_value=20.0,
-            value=5.0,
-            step=0.1
-        ) / 100
-        
-        # Período de análisis
-        st.subheader("📅 Período de Análisis")
-        start_date = st.date_input("Fecha de Inicio", value=datetime.now() - timedelta(days=365))
-        end_date = st.date_input("Fecha de Fin", value=datetime.now())
-    
-    # Cargar datos
+    # Cargar datos automáticamente
     operaciones, precios = load_data()
     
     if operaciones is not None and precios is not None:
@@ -399,297 +381,157 @@ def main():
         returns_df = calculator.calculate_daily_returns()
         
         if returns_df is not None:
-            # Calcular métricas
-            metrics = calculator.calculate_metrics(risk_free_rate)
+            # Rendimiento Individual de Activos
+            st.header("📈 Rendimiento Individual por Activo")
             
-            if metrics is not None:
-                # Mostrar métricas principales
-                st.header("📈 Métricas de Performance")
+            # Estadísticas resumidas por activo (usando análisis de atribución corregido)
+            asset_stats = calculator.calculate_attribution_analysis()
+            if not asset_stats.empty:
+                st.subheader("📊 Estadísticas por Activo")
                 
-                col1, col2, col3, col4 = st.columns(4)
+                # Formatear las columnas para mejor visualización
+                asset_stats_display = asset_stats.copy()
+                percentage_cols = ['Retorno_Total', 'Retorno_vs_Costo', 'Contribucion']
+                
+                for col in percentage_cols:
+                    if col in asset_stats_display.columns:
+                        asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"{x:.2%}")
+                
+                # Formatear precios
+                    price_cols = ['Precio_Promedio', 'Precio_Actual', 'Valor_Actual', 'Ganancias_Realizadas', 'Ingresos_Cupones_Dividendos', 'Ganancias_No_Realizadas', 'Inversion_Total']
+                for col in price_cols:
+                    if col in asset_stats_display.columns:
+                        asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"${x:,.2f}")
+                
+                # Formatear peso
+                if 'Peso' in asset_stats_display.columns:
+                    asset_stats_display['Peso'] = asset_stats_display['Peso'].apply(lambda x: f"{x:.1%}")
+                
+                # Formatear cantidad
+                if 'Cantidad' in asset_stats_display.columns:
+                    asset_stats_display['Cantidad'] = asset_stats_display['Cantidad'].apply(lambda x: f"{x:,.0f}")
+                
+                st.dataframe(asset_stats_display, use_container_width=True)
+                
+                # Gráfico de rendimientos por activo
+                col1, col2 = st.columns(2)
                 
                 with col1:
-                    # Calcular rendimiento total usando la misma fórmula que la última sección
-                    
-                    if 'Rendimiento_Diario' in returns_df.columns:
-                        cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
-                    else:
-                        cumulative_return = metrics['total_return']
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Rendimiento Total</div>
-                        <div class="metric-value {'positive' if cumulative_return > 0 else 'negative'}">
-                            {cumulative_return:.2%}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col2:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Rendimiento Anualizado</div>
-                        <div class="metric-value {'positive' if metrics['annualized_return'] > 0 else 'negative'}">
-                            {metrics['annualized_return']:.2%}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col3:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Volatilidad Anualizada</div>
-                        <div class="metric-value neutral">
-                            {metrics['volatility']:.2%}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col4:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Sharpe Ratio</div>
-                        <div class="metric-value {'positive' if metrics['sharpe_ratio'] > 1 else 'negative' if metrics['sharpe_ratio'] < 0 else 'neutral'}">
-                            {metrics['sharpe_ratio']:.2f}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # Métricas adicionales
-                col5, col6, col7, col8 = st.columns(4)
-                
-                with col5:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Máxima Pérdida</div>
-                        <div class="metric-value negative">
-                            {metrics['max_drawdown']:.2%}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col6:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Tasa de Éxito</div>
-                        <div class="metric-value positive">
-                            {metrics['win_rate']:.1%}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col7:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Días Positivos</div>
-                        <div class="metric-value positive">
-                            {metrics['positive_days']}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                with col8:
-                    st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Total de Días</div>
-                        <div class="metric-value neutral">
-                            {metrics['total_days']}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-                
-                # Métricas avanzadas
-                st.header("🔬 Métricas Avanzadas")
-                create_advanced_metrics(calculator, risk_free_rate)
-                
-                # Composición de la cartera
-                st.header("📋 Composición de la Cartera")
-                composition_df = create_portfolio_composition(calculator)
-                
-                # Gráficos
-                st.header("📊 Análisis Visual")
-                
-                # Gráfico de performance
-                performance_chart = create_performance_chart(returns_df)
-                if performance_chart:
-                    st.plotly_chart(performance_chart, use_container_width=True)
-                
-                # Gráfico de distribución de rendimientos
-                returns_dist = create_returns_distribution(returns_df)
-                if returns_dist:
-                    st.plotly_chart(returns_dist, use_container_width=True)
-                
-                # Análisis de atribución
-                st.header("🎯 Análisis de Atribución")
-                attribution_df = calculator.calculate_attribution_analysis()
-                
-                if not attribution_df.empty:
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.subheader("Contribución por Activo")
-                        st.dataframe(attribution_df, use_container_width=True)
-                    
-                    with col2:
-                        # Gráfico de contribución
-                        fig_attr = px.pie(
-                            attribution_df, 
-                            values='Contribucion', 
-                            names='Activo',
-                            title="Contribución al Rendimiento Total"
-                        )
-                        st.plotly_chart(fig_attr, use_container_width=True)
-                
-                # Rendimiento Individual de Activos
-                st.header("📈 Rendimiento Individual por Activo")
-                
-                # Estadísticas resumidas por activo (usando análisis de atribución corregido)
-                asset_stats = calculator.calculate_attribution_analysis()
-                if not asset_stats.empty:
-                    st.subheader("📊 Estadísticas por Activo")
-                    
-                    # Formatear las columnas para mejor visualización
-                    asset_stats_display = asset_stats.copy()
-                    percentage_cols = ['Retorno_Total', 'Retorno_vs_Costo', 'Contribucion']
-                    
-                    for col in percentage_cols:
-                        if col in asset_stats_display.columns:
-                            asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"{x:.2%}")
-                    
-                    # Formatear precios
-                    price_cols = ['Precio_Promedio', 'Precio_Actual', 'Valor_Actual', 'Ganancias_Realizadas', 'Ganancias_No_Realizadas', 'Inversion_Total']
-                    for col in price_cols:
-                        if col in asset_stats_display.columns:
-                            asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"${x:,.2f}")
-                    
-                    # Formatear peso
-                    if 'Peso' in asset_stats_display.columns:
-                        asset_stats_display['Peso'] = asset_stats_display['Peso'].apply(lambda x: f"{x:.1%}")
-                    
-                    # Formatear cantidad
-                    if 'Cantidad' in asset_stats_display.columns:
-                        asset_stats_display['Cantidad'] = asset_stats_display['Cantidad'].apply(lambda x: f"{x:,.0f}")
-                    
-                    st.dataframe(asset_stats_display, use_container_width=True)
-                    
-                    # Gráfico de rendimientos por activo
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        fig_returns = px.bar(
-                            asset_stats,
-                            x='Activo',
-                            y='Retorno_Total',
-                            title="Rendimiento Total por Activo",
-                            color='Retorno_Total',
-                            color_continuous_scale=['red', 'yellow', 'green']
-                        )
-                        fig_returns.update_layout(yaxis_tickformat='.1%')
-                        st.plotly_chart(fig_returns, use_container_width=True)
-                    
-                    with col2:
-                        fig_contribution = px.bar(
-                            asset_stats,
-                            x='Activo',
-                            y='Contribucion',
-                            title="Contribución al Portfolio por Activo",
-                            color='Contribucion',
-                            color_continuous_scale=['red', 'yellow', 'green']
-                        )
-                        fig_contribution.update_layout(yaxis_tickformat='.1%')
-                        st.plotly_chart(fig_contribution, use_container_width=True)
-                
-                # Performance histórica individual
-                individual_performance = calculator.calculate_asset_cumulative_returns()
-                if not individual_performance.empty:
-                    st.subheader("📈 Evolución de Rendimientos Acumulados")
-                    
-                    fig_individual = px.line(
-                        individual_performance,
-                        x='Fecha',
-                        y='Rendimiento_Acumulado',
-                        color='Activo',
-                        title="Rendimiento Acumulado por Activo (Sin Flujos de Cash)",
-                        labels={'Rendimiento_Acumulado': 'Rendimiento Acumulado'}
-                    )
-                    fig_individual.update_layout(yaxis_tickformat='.1%')
-                    st.plotly_chart(fig_individual, use_container_width=True)
-                
-                # Comparación de precios (usar función original que incluye precios)
-                individual_prices = calculator.calculate_individual_asset_performance()
-                if not individual_prices.empty:
-                    st.subheader("💰 Evolución de Precios")
-                    fig_prices = px.line(
-                        individual_prices,
-                        x='Fecha',
-                        y='Precio',
-                        color='Activo',
-                        title="Evolución de Precios por Activo",
-                        labels={'Precio': 'Precio'}
-                    )
-                    st.plotly_chart(fig_prices, use_container_width=True)
-                
-                # Resumen de performance mensual
-                st.header("📅 Resumen Mensual")
-                monthly_summary = calculator.get_performance_summary()
-                
-                if not monthly_summary.empty:
-                    st.dataframe(monthly_summary, use_container_width=True)
-                    
-                    # Gráfico de rendimientos mensuales
-                    fig_monthly = px.bar(
-                        monthly_summary.reset_index(),
-                        x='Fecha',
-                        y='Retorno_Mensual',
-                        title="Rendimientos Mensuales",
-                        color='Retorno_Mensual',
+                    fig_returns = px.bar(
+                        asset_stats,
+                        x='Activo',
+                        y='Retorno_Total',
+                        title="Rendimiento Total por Activo",
+                        color='Retorno_Total',
                         color_continuous_scale=['red', 'yellow', 'green']
                     )
-                    st.plotly_chart(fig_monthly, use_container_width=True)
+                    fig_returns.update_layout(yaxis_tickformat='.1%')
+                    st.plotly_chart(fig_returns, use_container_width=True)
                 
-                # Tabla de datos
-                st.header("📋 Datos de Rendimientos")
+                with col2:
+                    fig_contribution = px.bar(
+                        asset_stats,
+                        x='Activo',
+                        y='Contribucion',
+                        title="Contribución al Portfolio por Activo",
+                        color='Contribucion',
+                        color_continuous_scale=['red', 'yellow', 'green']
+                    )
+                    fig_contribution.update_layout(yaxis_tickformat='.1%')
+                    st.plotly_chart(fig_contribution, use_container_width=True)
+            
+            # Performance histórica individual
+            individual_performance = calculator.calculate_asset_cumulative_returns()
+            if not individual_performance.empty:
+                st.subheader("📈 Evolución de Rendimientos Acumulados")
                 
-                if returns_df is not None and not returns_df.empty:
-                    # Formatear la tabla para mejor visualización
-                    display_df = returns_df.copy()
-                    
-                    # Formatear fechas
-                    if 'Fecha' in display_df.columns:
-                        display_df['Fecha'] = pd.to_datetime(display_df['Fecha']).dt.strftime('%Y-%m-%d')
-                    
-                    # Formatear porcentajes
-                    if 'Rendimiento_Diario' in display_df.columns:
-                        display_df['Rendimiento_Diario'] = display_df['Rendimiento_Diario'].apply(lambda x: f"{x:.2%}")
-                    
-                    # Formatear valores monetarios
-                    money_cols = ['Valor_Cartera', 'Valor_Inicial', 'Daily_Cash_Flow', 'Value_Without_Cash_Flow']
-                    for col in money_cols:
-                        if col in display_df.columns:
-                            display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")
-                    
-                    st.dataframe(display_df, use_container_width=True)
-                    
-                    # Mostrar estadísticas resumidas
-                    st.subheader("📊 Resumen de Rendimientos")
-                    col1, col2, col3 = st.columns(3)
-                    
-                    with col1:
-                        if 'Rendimiento_Diario' in returns_df.columns:
-                            avg_return = returns_df['Rendimiento_Diario'].mean()
-                            st.metric("Rendimiento Promedio Diario", f"{avg_return:.2%}")
-                    
-                    with col2:
-                        if 'Rendimiento_Diario' in returns_df.columns:
-                            volatility = returns_df['Rendimiento_Diario'].std()
-                            st.metric("Volatilidad Diaria", f"{volatility:.2%}")
-                    
-                    with col3:
-                        if 'Rendimiento_Diario' in returns_df.columns:
-                            # Usar el mismo cálculo que la tabla para consistencia
-                            cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
-                            st.metric("Rendimiento Total", f"{cumulative_return:.2%}")
-                else:
-                    st.warning("No hay datos de rendimientos disponibles.")
+                fig_individual = px.line(
+                    individual_performance,
+                    x='Fecha',
+                    y='Rendimiento_Acumulado',
+                    color='Activo',
+                    title="Rendimiento Acumulado por Activo (Sin Flujos de Cash)",
+                    labels={'Rendimiento_Acumulado': 'Rendimiento Acumulado'}
+                )
+                fig_individual.update_layout(yaxis_tickformat='.1%')
+                st.plotly_chart(fig_individual, use_container_width=True)
+            
+            # Comparación de precios (usar función original que incluye precios)
+            individual_prices = calculator.calculate_individual_asset_performance()
+            if not individual_prices.empty:
+                st.subheader("💰 Evolución de Precios")
+                fig_prices = px.line(
+                    individual_prices,
+                    x='Fecha',
+                    y='Precio',
+                    color='Activo',
+                    title="Evolución de Precios por Activo",
+                    labels={'Precio': 'Precio'}
+                )
+                st.plotly_chart(fig_prices, use_container_width=True)
+            
+            # Resumen de performance mensual
+            st.header("📅 Resumen Mensual")
+            monthly_summary = calculator.get_performance_summary()
+            
+            if not monthly_summary.empty:
+                st.dataframe(monthly_summary, use_container_width=True)
+                
+                # Gráfico de rendimientos mensuales
+                fig_monthly = px.bar(
+                    monthly_summary.reset_index(),
+                    x='Fecha',
+                    y='Retorno_Mensual',
+                    title="Rendimientos Mensuales",
+                    color='Retorno_Mensual',
+                    color_continuous_scale=['red', 'yellow', 'green']
+                )
+                st.plotly_chart(fig_monthly, use_container_width=True)
+            
+            # Tabla de datos
+            st.header("📋 Datos de Rendimientos")
+            
+            if returns_df is not None and not returns_df.empty:
+                # Formatear la tabla para mejor visualización
+                display_df = returns_df.copy()
+                
+                # Formatear fechas
+                if 'Fecha' in display_df.columns:
+                    display_df['Fecha'] = pd.to_datetime(display_df['Fecha']).dt.strftime('%Y-%m-%d')
+                
+                # Formatear porcentajes
+                if 'Rendimiento_Diario' in display_df.columns:
+                    display_df['Rendimiento_Diario'] = display_df['Rendimiento_Diario'].apply(lambda x: f"{x:.2%}")
+                
+                # Formatear valores monetarios
+                money_cols = ['Valor_Cartera', 'Valor_Inicial', 'Daily_Cash_Flow', 'Value_Without_Cash_Flow']
+                for col in money_cols:
+                    if col in display_df.columns:
+                        display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")
+                
+                st.dataframe(display_df, use_container_width=True)
+                
+                # Mostrar estadísticas resumidas
+                st.subheader("📊 Resumen de Rendimientos")
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    if 'Rendimiento_Diario' in returns_df.columns:
+                        avg_return = returns_df['Rendimiento_Diario'].mean()
+                        st.metric("Rendimiento Promedio Diario", f"{avg_return:.2%}")
+                
+                with col2:
+                    if 'Rendimiento_Diario' in returns_df.columns:
+                        volatility = returns_df['Rendimiento_Diario'].std()
+                        st.metric("Volatilidad Diaria", f"{volatility:.2%}")
+                
+                with col3:
+                    if 'Rendimiento_Diario' in returns_df.columns:
+                        # Usar el mismo cálculo que la tabla para consistencia
+                        cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
+                        st.metric("Rendimiento Total", f"{cumulative_return:.2%}")
+            else:
+                st.warning("No hay datos de rendimientos disponibles.")
     
     else:
         # Mostrar información de ejemplo
