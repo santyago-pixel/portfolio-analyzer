@@ -530,28 +530,32 @@ def main():
                 # Rendimiento Individual de Activos
                 st.header("📈 Rendimiento Individual por Activo")
                 
-                # Estadísticas resumidas por activo
-                asset_stats = calculator.get_asset_summary_stats()
+                # Estadísticas resumidas por activo (usando análisis de atribución corregido)
+                asset_stats = calculator.calculate_attribution_analysis()
                 if not asset_stats.empty:
                     st.subheader("📊 Estadísticas por Activo")
                     
                     # Formatear las columnas para mejor visualización
                     asset_stats_display = asset_stats.copy()
-                    percentage_cols = ['Rendimiento_Total', 'Rendimiento_Anualizado', 'Volatilidad_Anualizada', 
-                                     'Sharpe_Ratio', 'Rendimiento_Maximo', 'Rendimiento_Minimo']
+                    percentage_cols = ['Retorno_Total', 'Retorno_vs_Costo', 'Contribucion']
                     
                     for col in percentage_cols:
                         if col in asset_stats_display.columns:
-                            if col == 'Sharpe_Ratio':
-                                asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"{x:.3f}")
-                            else:
-                                asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"{x:.2%}")
+                            asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"{x:.2%}")
                     
                     # Formatear precios
-                    price_cols = ['Precio_Inicial', 'Precio_Final', 'Precio_Maximo', 'Precio_Minimo']
+                    price_cols = ['Precio_Promedio', 'Precio_Actual', 'Valor_Actual', 'Ganancias_Realizadas', 'Ganancias_No_Realizadas', 'Inversion_Total']
                     for col in price_cols:
                         if col in asset_stats_display.columns:
                             asset_stats_display[col] = asset_stats_display[col].apply(lambda x: f"${x:,.2f}")
+                    
+                    # Formatear peso
+                    if 'Peso' in asset_stats_display.columns:
+                        asset_stats_display['Peso'] = asset_stats_display['Peso'].apply(lambda x: f"{x:.1%}")
+                    
+                    # Formatear cantidad
+                    if 'Cantidad' in asset_stats_display.columns:
+                        asset_stats_display['Cantidad'] = asset_stats_display['Cantidad'].apply(lambda x: f"{x:,.0f}")
                     
                     st.dataframe(asset_stats_display, use_container_width=True)
                     
