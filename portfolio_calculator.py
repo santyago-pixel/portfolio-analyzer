@@ -27,6 +27,12 @@ class PortfolioCalculator:
         # Convertir fechas
         self.operaciones['Fecha'] = pd.to_datetime(self.operaciones['Fecha'])
         
+        # Limpiar espacios en blanco de las columnas de texto
+        if 'Tipo' in self.operaciones.columns:
+            self.operaciones['Tipo'] = self.operaciones['Tipo'].str.strip()
+        if 'Activo' in self.operaciones.columns:
+            self.operaciones['Activo'] = self.operaciones['Activo'].str.strip()
+        
         # Normalizar nombres de columnas de operaciones
         if 'Operacion' in self.operaciones.columns and 'Tipo' not in self.operaciones.columns:
             self.operaciones['Tipo'] = self.operaciones['Operacion']
@@ -120,7 +126,7 @@ class PortfolioCalculator:
                     positions[asset]['cantidad'] -= cantidad
                     # No afecta cash_flow neto (ingresa monto por venta, sale monto de cartera)
                 
-                elif any(keyword in tipo.lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
+                elif any(keyword in tipo.strip().lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
                     # Cupón/Dividendo: ingresa por cobro, luego sale de la cartera
                     # No afecta cash_flow neto, pero es ganancia realizada
                     # El monto se suma al rendimiento del activo y de la cartera
@@ -368,7 +374,7 @@ class PortfolioCalculator:
                         # Ajustar suma ponderada proporcionalmente
                         weighted_price_sum = (weighted_price_sum / (current_quantity + cantidad)) * current_quantity
                 
-                elif any(keyword in tipo.lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
+                elif any(keyword in tipo.strip().lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
                     # Cupón/Dividendo: se suma al rendimiento del activo
                     # No afecta la cantidad ni el precio promedio
                     coupon_dividend_income += monto

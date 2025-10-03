@@ -505,7 +505,7 @@ def main():
             # Buscar cupones con diferentes variaciones
             debug_info = []
             for _, op in operaciones.iterrows():
-                tipo_str = str(op['Tipo']).lower()
+                tipo_str = str(op['Tipo']).strip().lower()
                 if any(keyword in tipo_str for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
                     debug_info.append({
                         'Fecha': op['Fecha'],
