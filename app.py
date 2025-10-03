@@ -409,15 +409,17 @@ def main():
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
-                    # Debug temporal
-                    st.write(f"DEBUG - Total Return Raw: {metrics['total_return']}")
-                    st.write(f"DEBUG - Total Return Formatted: {metrics['total_return']:.2%}")
+                    # Calcular rendimiento total usando la misma fórmula que la última sección
                     
+                    if 'Rendimiento_Diario' in returns_df.columns:
+                        cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
+                    else:
+                        cumulative_return = metrics['total_return']
                     st.markdown(f"""
                     <div class="metric-card">
                         <div class="metric-label">Rendimiento Total</div>
-                        <div class="metric-value {'positive' if metrics['total_return'] > 0 else 'negative'}">
-                            {metrics['total_return']:.2%}
+                        <div class="metric-value {'positive' if cumulative_return > 0 else 'negative'}">
+                            {cumulative_return:.2%}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
