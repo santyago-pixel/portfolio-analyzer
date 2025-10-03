@@ -58,7 +58,7 @@ st.markdown("""
 
 def load_data():
     """Cargar datos de operaciones y precios"""
-    st.info("📁 Carga tu archivo Excel o usa datos de ejemplo")
+    st.info("Carga tu archivo Excel o usa datos de ejemplo")
     
     col1, col2 = st.columns([2, 1])
     
@@ -66,7 +66,7 @@ def load_data():
         # Intentar cargar automáticamente el archivo operaciones.xlsx
         default_file = "operaciones.xlsx"
         if os.path.exists(default_file):
-            st.success(f"✅ Archivo encontrado: {default_file}")
+            st.success(f"Archivo encontrado: {default_file}")
             uploaded_file = default_file
         else:
             uploaded_file = st.file_uploader(
@@ -76,14 +76,14 @@ def load_data():
             )
         
         st.markdown("""
-        **📋 Formato requerido:**
+        **Formato requerido:**
         
         **Hoja 'Operaciones':** Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor
         **Hoja 'Precios':** Fechas en columna A, activos en fila 1
         """)
     
     with col2:
-        if st.button("📊 Usar Datos de Ejemplo", type="secondary"):
+        if st.button("Usar Datos de Ejemplo", type="secondary"):
             st.session_state.use_sample_data = True
     
     # Buscar archivo Excel automáticamente
@@ -91,7 +91,7 @@ def load_data():
     if not uploaded_file and excel_files:
         # Si hay archivos Excel en el directorio, usar el primero
         excel_file = excel_files[0]
-        st.info(f"📁 Archivo Excel detectado: {excel_file}")
+        st.info(f"Archivo Excel detectado: {excel_file}")
         uploaded_file = open(excel_file, 'rb')
     
     if uploaded_file is not None:
@@ -156,57 +156,11 @@ def load_data():
     if st.session_state.get('use_sample_data', False):
         from example_data import generate_sample_data_with_your_structure
         operaciones, precios = generate_sample_data_with_your_structure()
-        st.success("✅ Datos de ejemplo cargados correctamente")
+        st.success("Datos de ejemplo cargados correctamente")
         return operaciones, precios
     
     return None, None
 
-def create_advanced_metrics(calculator: PortfolioCalculator, risk_free_rate: float):
-    """Crear métricas avanzadas usando el calculador"""
-    metrics = calculator.calculate_metrics(risk_free_rate)
-    
-    # Crear tarjetas de métricas avanzadas
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">Sortino Ratio</div>
-            <div class="metric-value {'positive' if metrics['sortino_ratio'] > 1 else 'negative' if metrics['sortino_ratio'] < 0 else 'neutral'}">
-                {metrics['sortino_ratio']:.2f}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">Calmar Ratio</div>
-            <div class="metric-value {'positive' if metrics['calmar_ratio'] > 1 else 'negative' if metrics['calmar_ratio'] < 0 else 'neutral'}">
-                {metrics['calmar_ratio']:.2f}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">VaR 95%</div>
-            <div class="metric-value negative">
-                {metrics['var_95']:.2%}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-label">CVaR 95%</div>
-            <div class="metric-value negative">
-                {metrics['cvar_95']:.2%}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
 def create_portfolio_composition(calculator: PortfolioCalculator):
     """Crear sección de composición de la cartera"""
@@ -293,7 +247,7 @@ def create_portfolio_composition(calculator: PortfolioCalculator):
     if composition_data:
         composition_df = pd.DataFrame(composition_data)
         
-        st.header("📋 Composición de la Cartera")
+        st.header("Composición de la Cartera")
         
         # Mostrar resumen
         col1, col2, col3 = st.columns(3)
@@ -383,24 +337,15 @@ def create_returns_distribution(returns_df):
     return fig
 
 def main():
-    st.title("📊 Portfolio Analyzer - CUPONES Y AMORTIZACIONES ✅")
+    st.title("Portfolio Analyzer")
     st.markdown("---")
     
     # Sidebar con configuración
     with st.sidebar:
-        st.header("⚙️ Configuración")
-        
-        # Tasa libre de riesgo
-        risk_free_rate = st.number_input(
-            "Tasa Libre de Riesgo (%)",
-            min_value=0.0,
-            max_value=20.0,
-            value=5.0,
-            step=0.1
-        ) / 100
+        st.header("Configuración")
         
         # Período de análisis
-        st.subheader("📅 Período de Análisis")
+        st.subheader("Período de Análisis")
         start_date = st.date_input("Fecha de Inicio", value=datetime.now() - timedelta(days=365))
         end_date = st.date_input("Fecha de Fin", value=datetime.now())
     
@@ -433,11 +378,11 @@ def main():
         
         # Mostrar información del período filtrado
         if not operaciones_period.empty:
-            st.info(f"📅 **Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} ({len(operaciones_period)} operaciones)")
+            st.info(f"**Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} ({len(operaciones_period)} operaciones)")
         elif has_assets_in_portfolio:
-            st.info(f"📅 **Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} (sin operaciones, pero con activos en cartera)")
+            st.info(f"**Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} (sin operaciones, pero con activos en cartera)")
         else:
-            st.warning(f"⚠️ No hay operaciones ni activos en cartera en el período seleccionado: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+            st.warning(f"No hay operaciones ni activos en cartera en el período seleccionado: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
             return
         
         # Calcular rendimientos diarios
@@ -445,11 +390,11 @@ def main():
         
         if returns_df is not None:
             # Calcular métricas
-            metrics = calculator.calculate_metrics(risk_free_rate)
+            metrics = calculator.calculate_metrics(0.05)  # Tasa libre de riesgo fija del 5%
             
             if metrics is not None:
                 # Mostrar métricas principales
-                st.header("📈 Métricas de Performance")
+                st.header("Métricas de Performance")
                 
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -498,22 +443,9 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                # Métricas avanzadas
-                st.header("🔬 Métricas Avanzadas")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                
-                with col1:
-                    st.metric("Sortino Ratio", f"{metrics['sortino_ratio']:.2f}")
-                with col2:
-                    st.metric("Calmar Ratio", f"{metrics['calmar_ratio']:.2f}")
-                with col3:
-                    st.metric("Max Drawdown", f"{metrics['max_drawdown']:.2%}")
-                with col4:
-                    st.metric("VaR (95%)", f"{metrics['var_95']:.2%}")
             
             # Análisis Visual
-            st.header("📊 Análisis Visual")
+            st.header("Análisis Visual")
             
             # Gráfico de rendimientos acumulados
             fig_cumulative = px.line(
@@ -536,7 +468,7 @@ def main():
             st.plotly_chart(fig_daily, use_container_width=True)
             
             # Análisis de Atribución
-            st.header("🎯 Análisis de Atribución")
+            st.header("Análisis de Atribución")
             
             
             # Calcular análisis de atribución
@@ -578,12 +510,12 @@ def main():
                 st.dataframe(attribution_display, use_container_width=True)
             
             # Rendimiento Individual de Activos
-            st.header("📈 Rendimiento Individual por Activo")
+            st.header("Rendimiento Individual por Activo")
             
             # Estadísticas resumidas por activo (usando análisis de atribución corregido)
             asset_stats = calculator.calculate_attribution_analysis()
             if not asset_stats.empty:
-                st.subheader("📊 Estadísticas por Activo")
+                st.subheader("Estadísticas por Activo")
                 
                 # Formatear las columnas para mejor visualización
                 asset_stats_display = asset_stats.copy()
@@ -639,7 +571,7 @@ def main():
             # Performance histórica individual
             individual_performance = calculator.calculate_asset_cumulative_returns()
             if not individual_performance.empty:
-                st.subheader("📈 Evolución de Rendimientos Acumulados")
+                st.subheader("Evolución de Rendimientos Acumulados")
                 
                 fig_individual = px.line(
                     individual_performance,
@@ -655,7 +587,7 @@ def main():
             # Comparación de precios (usar función original que incluye precios)
             individual_prices = calculator.calculate_individual_asset_performance()
             if not individual_prices.empty:
-                st.subheader("💰 Evolución de Precios")
+                st.subheader("Evolución de Precios")
                 fig_prices = px.line(
                     individual_prices,
                     x='Fecha',
@@ -666,26 +598,9 @@ def main():
                 )
                 st.plotly_chart(fig_prices, use_container_width=True)
             
-            # Resumen de performance mensual
-            st.header("📅 Resumen Mensual")
-            monthly_summary = calculator.get_performance_summary()
-            
-            if not monthly_summary.empty:
-                st.dataframe(monthly_summary, use_container_width=True)
-                
-                # Gráfico de rendimientos mensuales
-                fig_monthly = px.bar(
-                    monthly_summary.reset_index(),
-                    x='Fecha',
-                    y='Retorno_Mensual',
-                    title="Rendimientos Mensuales",
-                    color='Retorno_Mensual',
-                    color_continuous_scale=['red', 'yellow', 'green']
-                )
-                st.plotly_chart(fig_monthly, use_container_width=True)
             
             # Tabla de datos
-            st.header("📋 Datos de Rendimientos")
+            st.header("Datos de Rendimientos")
             
             if returns_df is not None and not returns_df.empty:
                 # Formatear la tabla para mejor visualización
@@ -714,7 +629,7 @@ def main():
                 st.dataframe(display_df, use_container_width=True)
                 
                 # Mostrar estadísticas resumidas
-                st.subheader("📊 Resumen de Rendimientos")
+                st.subheader("Resumen de Rendimientos")
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
@@ -738,7 +653,7 @@ def main():
     else:
         # Mostrar información de ejemplo
         st.info("""
-        ## 📋 Formato Esperado del Excel
+        ## Formato Esperado del Excel
         
         Tu archivo Excel debe contener dos hojas:
         
@@ -757,7 +672,7 @@ def main():
         """)
         
         # Mostrar ejemplo de datos
-        st.subheader("📊 Ejemplo de Datos")
+        st.subheader("Ejemplo de Datos")
         
         # Ejemplo de operaciones
         st.write("**Operaciones de Ejemplo:**")
