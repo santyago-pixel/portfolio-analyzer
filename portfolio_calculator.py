@@ -22,21 +22,7 @@ class PortfolioCalculator:
     
     def _process_data(self):
         """Procesar y limpiar los datos de entrada"""
-        # Debug: imprimir información sobre las operaciones cargadas
-        print(f"DEBUG: Total de operaciones cargadas: {len(self.operaciones)}")
-        print(f"DEBUG: Columnas disponibles: {list(self.operaciones.columns)}")
-        print(f"DEBUG: Primeras 10 operaciones:")
-        print(self.operaciones.head(10))
-        
-        # Debug específico: verificar la fila 7 (celdas B7 y G7 en Excel)
-        if len(self.operaciones) >= 7:
-            fila_7 = self.operaciones.iloc[6]  # Índice 6 = fila 7
-            print(f"DEBUG: Fila 7 (celdas B7-G7):")
-            print(f"  Tipo (columna B): '{fila_7.get('Tipo', 'N/A')}'")
-            print(f"  Monto (columna G): '{fila_7.get('Monto', 'N/A')}'")
-            print(f"  Fecha: '{fila_7.get('Fecha', 'N/A')}'")
-            print(f"  Activo: '{fila_7.get('Activo', 'N/A')}'")
-            print(f"  Fila completa: {fila_7.to_dict()}")
+        # Debug removido para limpiar la salida
         
         # Convertir fechas
         self.operaciones['Fecha'] = pd.to_datetime(self.operaciones['Fecha'])
@@ -360,8 +346,7 @@ class PortfolioCalculator:
                 precio_op = op['Precio_Concertacion']
                 monto = op['Monto']
                 
-                # Debug: imprimir todas las operaciones para este activo
-                print(f"DEBUG: Procesando operación para {asset}: Tipo='{tipo}' (lower='{tipo.lower()}'), Monto={monto}, Fecha={op['Fecha']}")
+                # Debug removido para limpiar la salida
                 
                 if tipo == 'Compra':
                     total_invested += monto
@@ -387,8 +372,6 @@ class PortfolioCalculator:
                     # Cupón/Dividendo: se suma al rendimiento del activo
                     # No afecta la cantidad ni el precio promedio
                     coupon_dividend_income += monto
-                    # Debug: imprimir información del cupón detectado
-                    print(f"DEBUG: Cupón detectado para {asset}: {tipo} - Monto: {monto} - Fecha: {op['Fecha']}")
             
             if current_quantity > 0:
                 # Calcular precio promedio actual
