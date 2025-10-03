@@ -58,40 +58,25 @@ st.markdown("""
 
 def load_data():
     """Cargar datos de operaciones y precios"""
-    st.info("Carga tu archivo Excel o usa datos de ejemplo")
+    # Intentar cargar automáticamente el archivo operaciones.xlsx
+    default_file = "operaciones.xlsx"
+    if os.path.exists(default_file):
+        uploaded_file = default_file
+    else:
+        uploaded_file = st.file_uploader(
+            "Selecciona tu archivo Excel",
+            type=['xlsx', 'xls'],
+            help="El archivo debe contener dos hojas: 'Operaciones' y 'Precios'"
+        )
     
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        # Intentar cargar automáticamente el archivo operaciones.xlsx
-        default_file = "operaciones.xlsx"
-        if os.path.exists(default_file):
-            st.success(f"Archivo encontrado: {default_file}")
-            uploaded_file = default_file
-        else:
-            uploaded_file = st.file_uploader(
-                "Selecciona tu archivo Excel",
-                type=['xlsx', 'xls'],
-                help="El archivo debe contener dos hojas: 'Operaciones' y 'Precios'"
-            )
-        
-        st.markdown("""
-        **Formato requerido:**
-        
-        **Hoja 'Operaciones':** Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor
-        **Hoja 'Precios':** Fechas en columna A, activos en fila 1
-        """)
-    
-    with col2:
-        if st.button("Usar Datos de Ejemplo", type="secondary"):
-            st.session_state.use_sample_data = True
+    if st.button("Usar Datos de Ejemplo", type="secondary"):
+        st.session_state.use_sample_data = True
     
     # Buscar archivo Excel automáticamente
     excel_files = [f for f in os.listdir('.') if f.endswith('.xlsx')]
     if not uploaded_file and excel_files:
         # Si hay archivos Excel en el directorio, usar el primero
         excel_file = excel_files[0]
-        st.info(f"Archivo Excel detectado: {excel_file}")
         uploaded_file = open(excel_file, 'rb')
     
     if uploaded_file is not None:
@@ -156,7 +141,6 @@ def load_data():
     if st.session_state.get('use_sample_data', False):
         from example_data import generate_sample_data_with_your_structure
         operaciones, precios = generate_sample_data_with_your_structure()
-        st.success("Datos de ejemplo cargados correctamente")
         return operaciones, precios
     
     return None, None
