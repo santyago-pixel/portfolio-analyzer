@@ -99,6 +99,17 @@ def load_data():
             # Cargar operaciones (estructura: Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor)
             operaciones = pd.read_excel(uploaded_file, sheet_name='Operaciones')
             
+            # Debug: mostrar datos crudos del Excel
+            st.write("**🔍 DEBUG - Datos crudos del Excel (primeras 10 filas):**")
+            st.dataframe(operaciones.head(10))
+            
+            # Debug: mostrar tipos únicos en la columna 'Operacion'
+            if 'Operacion' in operaciones.columns:
+                tipos_operacion = operaciones['Operacion'].unique()
+                st.write("**Tipos únicos en columna 'Operacion':**")
+                for i, tipo in enumerate(tipos_operacion):
+                    st.write(f"{i+1}. '{tipo}' (lower: '{str(tipo).lower()}')")
+            
             # Mapear columnas a formato esperado
             operaciones_mapped = pd.DataFrame()
             operaciones_mapped['Fecha'] = operaciones['Fecha']
