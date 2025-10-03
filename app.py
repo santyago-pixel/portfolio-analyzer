@@ -670,9 +670,11 @@ def main():
                             st.metric("Volatilidad Diaria", f"{volatility:.2%}")
                     
                     with col3:
-                        if 'Valor_Cartera' in returns_df.columns:
-                            total_return = (returns_df['Valor_Cartera'].iloc[-1] - returns_df['Valor_Cartera'].iloc[0]) / returns_df['Valor_Cartera'].iloc[0]
-                            st.metric("Rendimiento Total", f"{total_return:.2%}")
+                        if 'Rendimiento_Diario' in returns_df.columns:
+                            # Calcular rendimiento total acumulado usando rendimientos diarios
+                            # Esto considera todas las compras/ventas realizadas
+                            cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
+                            st.metric("Rendimiento Total", f"{cumulative_return:.2%}")
                 else:
                     st.warning("No hay datos de rendimientos disponibles.")
     
