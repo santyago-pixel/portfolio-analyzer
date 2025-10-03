@@ -408,8 +408,8 @@ class PortfolioCalculator:
                     # Calcular ganancia/pérdida no realizada
                     unrealized_gain = current_value - (current_quantity * avg_purchase_price)
                     
-                    # Calcular ganancia total (realizada + no realizada + cupones/dividendos)
-                    total_gain = realized_gains + unrealized_gain + coupon_dividend_income
+                    # Calcular ganancia total (realizada + no realizada + cupones/dividendos + amortizaciones)
+                    total_gain = realized_gains + unrealized_gain + coupon_dividend_income + amortizations
                     
                     # Calcular retorno total
                     total_return = total_gain / total_invested if total_invested > 0 else 0
@@ -603,9 +603,9 @@ class PortfolioCalculator:
                             total_quantity_original += op['Cantidad']
                     
                     if total_invested_original > 0:
-                        # Rendimiento total = (Valor actual + Ganancias realizadas + Cupones/Dividendos - Inversión original) / Inversión original
+                        # Rendimiento total = (Valor actual + Ganancias realizadas + Cupones/Dividendos + Amortizaciones - Inversión original) / Inversión original
                         current_value = total_quantity * row['Precio'] if total_quantity > 0 else 0
-                        total_return = (current_value + realized_gains + coupon_dividend_income - total_invested_original) / total_invested_original
+                        total_return = (current_value + realized_gains + coupon_dividend_income + amortizations - total_invested_original) / total_invested_original
                     else:
                         total_return = 0
                     
