@@ -658,7 +658,7 @@ def main():
                         display_df['Rendimiento_Diario'] = display_df['Rendimiento_Diario'].apply(lambda x: f"{x:.2%}")
                     
                     # Formatear valores monetarios
-                    money_cols = ['Valor_Cartera', 'Valor_Inicial']
+                    money_cols = ['Valor_Cartera', 'Valor_Inicial', 'Daily_Cash_Flow', 'Value_Without_Cash_Flow']
                     for col in money_cols:
                         if col in display_df.columns:
                             display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")

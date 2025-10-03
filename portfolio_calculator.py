@@ -161,12 +161,20 @@ class PortfolioCalculator:
         
         # Calcular rendimientos excluyendo flujos de cash
         returns = []
+        cash_flows = []
+        values_without_cash_flow = []
         initial_value = None
         previous_value = None
         
         for i, row in portfolio_data.iterrows():
             current_value = row['Valor_Cartera']
             current_date = row['Fecha']
+            
+            # Calcular flujos de cash del día
+            daily_operations = self.operaciones[self.operaciones['Fecha'] == current_date]
+            daily_purchases = daily_operations[daily_operations['Tipo'].str.strip() == 'Compra']['Monto'].sum()
+            daily_sales = daily_operations[daily_operations['Tipo'].str.strip() == 'Venta']['Monto'].sum()
+            daily_cash_flow = daily_purchases - daily_sales
             
             # El primer día con valor > 0 es nuestro valor inicial
             if initial_value is None and current_value > 0:
@@ -179,12 +187,6 @@ class PortfolioCalculator:
                 if current_value > 0:
                     previous_value = current_value
             else:
-                # Calcular flujos de cash del día
-                daily_operations = self.operaciones[self.operaciones['Fecha'] == current_date]
-                daily_purchases = daily_operations[daily_operations['Tipo'].str.strip() == 'Compra']['Monto'].sum()
-                daily_sales = daily_operations[daily_operations['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-                daily_cash_flow = daily_purchases - daily_sales
-                
                 # Calcular rendimiento excluyendo flujos de cash
                 # El rendimiento es solo por movimientos de precios de activos existentes
                 value_without_cash_flow = current_value - daily_cash_flow
@@ -192,12 +194,16 @@ class PortfolioCalculator:
                 previous_value = current_value
             
             returns.append(daily_return)
+            cash_flows.append(daily_cash_flow)
+            values_without_cash_flow.append(current_value - daily_cash_flow)
         
         # Crear DataFrame
         returns_df = pd.DataFrame({
             'Fecha': portfolio_data['Fecha'],
             'Rendimiento_Diario': returns,
-            'Valor_Cartera': portfolio_data['Valor_Cartera']
+            'Valor_Cartera': portfolio_data['Valor_Cartera'],
+            'Daily_Cash_Flow': cash_flows,
+            'Value_Without_Cash_Flow': values_without_cash_flow
         })
         
         # Filtrar valores válidos (donde hay activos en cartera)
