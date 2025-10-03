@@ -521,6 +521,15 @@ class PortfolioCalculator:
                     'Inversion_Total': total_invested
                 })
         
+        # Calcular inversión total de la cartera
+        df = pd.DataFrame(attribution_data)
+        total_investment = df['Inversion_Total'].sum()
+        
+        # Recalcular peso y contribución basados en inversión total
+        for data in attribution_data:
+            data['Peso'] = data['Inversion_Total'] / total_investment if total_investment > 0 else 0
+            data['Contribucion'] = data['Peso'] * data['Retorno_Total']
+        
         return pd.DataFrame(attribution_data)
     
     def calculate_asset_cumulative_returns(self) -> pd.DataFrame:
