@@ -496,6 +496,10 @@ def main():
             # Debug temporal: mostrar información sobre cupones detectados
             st.subheader("🔍 Debug - Análisis de Operaciones")
             
+            # Mostrar todas las operaciones cargadas
+            st.write("**Todas las operaciones cargadas del Excel:**")
+            st.dataframe(operaciones)
+            
             # Mostrar todos los tipos de operaciones únicos
             tipos_unicos = operaciones['Tipo'].unique()
             st.write("**Tipos de operaciones encontrados en el archivo:**")
