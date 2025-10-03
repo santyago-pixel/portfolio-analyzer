@@ -409,6 +409,10 @@ def main():
                 col1, col2, col3, col4 = st.columns(4)
                 
                 with col1:
+                    # Debug temporal
+                    st.write(f"DEBUG - Total Return Raw: {metrics['total_return']}")
+                    st.write(f"DEBUG - Total Return Formatted: {metrics['total_return']:.2%}")
+                    
                     st.markdown(f"""
                     <div class="metric-card">
                         <div class="metric-label">Rendimiento Total</div>
