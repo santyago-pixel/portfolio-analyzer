@@ -401,9 +401,24 @@ class PortfolioCalculator:
         """Análisis de atribución por activo"""
         if self.portfolio_data is None:
             self.portfolio_data = self.calculate_portfolio_value()
-        
-        # Obtener activos únicos
-        assets = self.operaciones['Activo'].unique()
+
+        # Obtener activos únicos que estuvieron en cartera durante el período de análisis
+        if self.start_date is not None:
+            # Si hay fecha de inicio, considerar:
+            # 1. Activos con operaciones desde esa fecha
+            # 2. Activos que estaban en cartera antes de esa fecha (posiciones iniciales)
+            period_operations = self.operaciones[self.operaciones['Fecha'] >= self.start_date]
+            period_assets = set(period_operations['Activo'].unique())
+            
+            # Agregar activos que estaban en cartera antes de la fecha de inicio
+            initial_positions = self._get_initial_positions(self.start_date)
+            initial_assets = set(initial_positions.keys())
+            
+            # Combinar ambos conjuntos
+            assets = list(period_assets.union(initial_assets))
+        else:
+            # Si no hay fecha de inicio, considerar todos los activos
+            assets = self.operaciones['Activo'].unique()
         
         attribution_data = []
         
