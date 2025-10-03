@@ -82,6 +82,9 @@ class PortfolioCalculator:
         # Si se especifica una fecha de inicio, usarla como mínimo
         if self.start_date is not None:
             min_date = max(min_date, self.start_date)
+            # Asegurar que siempre haya al menos la fecha de inicio
+            if min_date > max_date:
+                max_date = min_date
         
         self.date_range = pd.date_range(
             start=min_date,
@@ -153,55 +156,57 @@ class PortfolioCalculator:
             
             cash_flow = 0
             
-            for _, op in ops_until_date.iterrows():
-                asset = op['Activo']
-                tipo = str(op['Tipo']).strip()  # Limpiar espacios en blanco
-                cantidad = op['Cantidad']
-                precio = op['Precio_Concertacion']
-                monto = op['Monto']
-                
-                if asset not in positions:
-                    positions[asset] = {'cantidad': 0, 'precio_promedio': 0}
-                
-                if tipo == 'Compra':
-                    # Compra: ingresa monto a la cartera + se compra el activo
-                    # Actualizar posición del activo
-                    old_qty = positions[asset]['cantidad']
-                    old_avg = positions[asset]['precio_promedio']
+            # Procesar operaciones solo si existen
+            if not ops_until_date.empty:
+                for _, op in ops_until_date.iterrows():
+                    asset = op['Activo']
+                    tipo = str(op['Tipo']).strip()  # Limpiar espacios en blanco
+                    cantidad = op['Cantidad']
+                    precio = op['Precio_Concertacion']
+                    monto = op['Monto']
                     
-                    new_qty = old_qty + cantidad
-                    if new_qty > 0:
-                        new_avg = (old_qty * old_avg + cantidad * precio) / new_qty
-                    else:
-                        new_avg = precio
+                    if asset not in positions:
+                        positions[asset] = {'cantidad': 0, 'precio_promedio': 0}
                     
-                    positions[asset]['cantidad'] = new_qty
-                    positions[asset]['precio_promedio'] = new_avg
+                    if tipo == 'Compra':
+                        # Compra: ingresa monto a la cartera + se compra el activo
+                        # Actualizar posición del activo
+                        old_qty = positions[asset]['cantidad']
+                        old_avg = positions[asset]['precio_promedio']
+                        
+                        new_qty = old_qty + cantidad
+                        if new_qty > 0:
+                            new_avg = (old_qty * old_avg + cantidad * precio) / new_qty
+                        else:
+                            new_avg = precio
+                        
+                        positions[asset]['cantidad'] = new_qty
+                        positions[asset]['precio_promedio'] = new_avg
+                        
+                        # No afecta cash_flow neto (ingresa monto, sale monto por compra)
+                        
+                    elif tipo == 'Venta':
+                        # Venta: sale monto de la cartera + se vende el activo
+                        # Reducir posición
+                        positions[asset]['cantidad'] -= cantidad
+                        # No afecta cash_flow neto (ingresa monto por venta, sale monto de cartera)
                     
-                    # No afecta cash_flow neto (ingresa monto, sale monto por compra)
+                    elif any(keyword in tipo.strip().lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
+                        # Cupón/Dividendo: ingresa por cobro, luego sale de la cartera
+                        # No afecta cash_flow neto, pero es ganancia realizada
+                        # El monto se suma al rendimiento del activo y de la cartera
+                        # Se considera outflow (salida de efectivo de la cartera)
+                        pass
                     
-                elif tipo == 'Venta':
-                    # Venta: sale monto de la cartera + se vende el activo
-                    # Reducir posición
-                    positions[asset]['cantidad'] -= cantidad
-                    # No afecta cash_flow neto (ingresa monto por venta, sale monto de cartera)
-                
-                elif any(keyword in tipo.strip().lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
-                    # Cupón/Dividendo: ingresa por cobro, luego sale de la cartera
-                    # No afecta cash_flow neto, pero es ganancia realizada
-                    # El monto se suma al rendimiento del activo y de la cartera
-                    # Se considera outflow (salida de efectivo de la cartera)
-                    pass
-                
-                elif any(keyword in tipo.strip().lower() for keyword in ['amortización', 'amortizacion', 'amortization']):
-                    # Amortización: no modifica el nominal, se suma como ganancia realizada
-                    # Es un outflow para la cartera (salida de dinero)
-                    # No afecta la cantidad de títulos, solo el flujo de efectivo
-                    pass
-                
-                elif tipo == 'Flujo':
-                    # Flujo de caja directo (aportes/retiros netos)
-                    cash_flow += monto
+                    elif any(keyword in tipo.strip().lower() for keyword in ['amortización', 'amortizacion', 'amortization']):
+                        # Amortización: no modifica el nominal, se suma como ganancia realizada
+                        # Es un outflow para la cartera (salida de dinero)
+                        # No afecta la cantidad de títulos, solo el flujo de efectivo
+                        pass
+                    
+                    elif tipo == 'Flujo':
+                        # Flujo de caja directo (aportes/retiros netos)
+                        cash_flow += monto
             
             # Calcular valor de la cartera (solo valor de mercado de activos)
             portfolio_value = 0  # Empezar en 0, no incluir cash
