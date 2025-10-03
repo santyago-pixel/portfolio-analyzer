@@ -133,6 +133,12 @@ class PortfolioCalculator:
                     # Se considera outflow (salida de efectivo de la cartera)
                     pass
                 
+                elif any(keyword in tipo.strip().lower() for keyword in ['amortización', 'amortizacion', 'amortization']):
+                    # Amortización: no modifica el nominal, se suma como ganancia realizada
+                    # Es un outflow para la cartera (salida de dinero)
+                    # No afecta la cantidad de títulos, solo el flujo de efectivo
+                    pass
+                
                 elif tipo == 'Flujo':
                     # Flujo de caja directo (aportes/retiros netos)
                     cash_flow += monto
@@ -185,7 +191,8 @@ class PortfolioCalculator:
             daily_purchases = daily_operations[daily_operations['Tipo'].str.strip() == 'Compra']['Monto'].sum()
             daily_sales = daily_operations[daily_operations['Tipo'].str.strip() == 'Venta']['Monto'].sum()
             daily_coupons = daily_operations[daily_operations['Tipo'].str.strip().isin(['Cupón', 'Cupon', 'Dividendo'])]['Monto'].sum()
-            daily_cash_flow = daily_purchases - daily_sales - daily_coupons
+            daily_amortizations = daily_operations[daily_operations['Tipo'].str.strip().str.lower().str.contains('|'.join(['amortización', 'amortizacion', 'amortization']), na=False)]['Monto'].sum()
+            daily_cash_flow = daily_purchases - daily_sales - daily_coupons - daily_amortizations
             
             # El primer día con valor > 0 es nuestro valor inicial
             if initial_value is None and current_value > 0:
@@ -378,6 +385,12 @@ class PortfolioCalculator:
                     # Cupón/Dividendo: se suma al rendimiento del activo
                     # No afecta la cantidad ni el precio promedio
                     coupon_dividend_income += monto
+                
+                elif any(keyword in tipo.strip().lower() for keyword in ['amortización', 'amortizacion', 'amortization']):
+                    # Amortización: no modifica el nominal, se suma como ganancia realizada
+                    # Es un outflow para la cartera (salida de dinero)
+                    # Se suma a las ganancias realizadas
+                    realized_gains += monto
             
             if current_quantity > 0:
                 # Calcular precio promedio actual
@@ -473,7 +486,8 @@ class PortfolioCalculator:
                 daily_purchases = daily_ops[daily_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
                 daily_sales = daily_ops[daily_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
                 daily_coupons = daily_ops[daily_ops['Tipo'].str.strip().str.lower().str.contains('|'.join(['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']), na=False)]['Monto'].sum()
-                daily_cash_flow = daily_purchases - daily_sales - daily_coupons
+                daily_amortizations = daily_ops[daily_ops['Tipo'].str.strip().str.lower().str.contains('|'.join(['amortización', 'amortizacion', 'amortization']), na=False)]['Monto'].sum()
+                daily_cash_flow = daily_purchases - daily_sales - daily_coupons - daily_amortizations
                 
                 if previous_value is None and current_value > 0:
                     initial_value = current_value
@@ -555,10 +569,16 @@ class PortfolioCalculator:
                             total_invested = 0
                             weighted_price_sum = 0
                     
-                    elif tipo_limpio in ['Cupón', 'Cupon', 'Dividendo']:
+                    elif any(keyword in tipo_limpio.lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
                         # Cupón/Dividendo: se suma al rendimiento del activo
                         # No afecta la cantidad ni el precio promedio
                         coupon_dividend_income += op['Monto']
+                    
+                    elif any(keyword in tipo_limpio.lower() for keyword in ['amortización', 'amortizacion', 'amortization']):
+                        # Amortización: no modifica el nominal, se suma como ganancia realizada
+                        # Es un outflow para la cartera (salida de dinero)
+                        # Se suma a las ganancias realizadas
+                        realized_gains += op['Monto']
                 
                 # Calcular precio promedio actual (solo para cantidad restante)
                 if total_quantity > 0:

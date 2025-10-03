@@ -113,10 +113,15 @@ def load_data():
             # Primero convertir 'nan' strings a NaN reales
             operaciones_mapped['Tipo'] = operaciones_mapped['Tipo'].replace('nan', np.nan)
             
-            # Para cupones, llenar NaN en cantidad y precio con 0
+            # Para cupones y amortizaciones, llenar NaN en cantidad y precio con 0
             cupon_mask = operaciones_mapped['Tipo'].str.strip().str.lower().str.contains('cupon', na=False)
-            operaciones_mapped.loc[cupon_mask, 'Cantidad'] = operaciones_mapped.loc[cupon_mask, 'Cantidad'].fillna(0)
-            operaciones_mapped.loc[cupon_mask, 'Precio_Concertacion'] = operaciones_mapped.loc[cupon_mask, 'Precio_Concertacion'].fillna(0)
+            amortization_mask = operaciones_mapped['Tipo'].str.strip().str.lower().str.contains('amortizacion', na=False)
+            
+            # Combinar máscaras para cupones y amortizaciones
+            special_ops_mask = cupon_mask | amortization_mask
+            
+            operaciones_mapped.loc[special_ops_mask, 'Cantidad'] = operaciones_mapped.loc[special_ops_mask, 'Cantidad'].fillna(0)
+            operaciones_mapped.loc[special_ops_mask, 'Precio_Concertacion'] = operaciones_mapped.loc[special_ops_mask, 'Precio_Concertacion'].fillna(0)
             
             # Ahora eliminar filas con NaN en columnas críticas
             operaciones_mapped = operaciones_mapped.dropna(subset=['Fecha', 'Tipo', 'Activo', 'Monto'])
@@ -378,7 +383,7 @@ def create_returns_distribution(returns_df):
     return fig
 
 def main():
-    st.title("📊 Portfolio Analyzer - CUPONES CORREGIDOS ✅")
+    st.title("📊 Portfolio Analyzer - CUPONES Y AMORTIZACIONES ✅")
     st.markdown("---")
     
     # Sidebar con configuración
