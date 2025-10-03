@@ -228,14 +228,9 @@ class PortfolioCalculator:
         
         returns = self.daily_returns['Rendimiento_Diario']
         
-        # Calcular rendimiento total basado en inversión total real vs valor final
-        # Esto considera todas las compras/ventas realizadas
-        total_invested = self.operaciones[self.operaciones['Tipo'].str.strip() == 'Compra']['Monto'].sum()
-        total_sales = self.operaciones[self.operaciones['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-        net_invested = total_invested - total_sales
-        
-        final_value = self.daily_returns['Valor_Cartera'].iloc[-1]
-        total_return = (final_value - net_invested) / net_invested if net_invested > 0 else 0
+        # Calcular rendimiento total usando el producto acumulado de rendimientos diarios
+        # Esta es la fórmula correcta que incluye automáticamente cupones y dividendos
+        total_return = (1 + returns).prod() - 1
         
         days = len(returns)
         annualized_return = (1 + total_return) ** (252 / days) - 1 if days > 0 else 0
