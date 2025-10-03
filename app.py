@@ -494,10 +494,19 @@ def main():
             st.header("🎯 Análisis de Atribución")
             
             # Debug temporal: mostrar información sobre cupones detectados
-            st.subheader("🔍 Debug - Cupones Detectados")
+            st.subheader("🔍 Debug - Análisis de Operaciones")
+            
+            # Mostrar todos los tipos de operaciones únicos
+            tipos_unicos = operaciones['Tipo'].unique()
+            st.write("**Tipos de operaciones encontrados en el archivo:**")
+            for i, tipo in enumerate(tipos_unicos):
+                st.write(f"{i+1}. '{tipo}' (lower: '{str(tipo).lower()}')")
+            
+            # Buscar cupones con diferentes variaciones
             debug_info = []
             for _, op in operaciones.iterrows():
-                if any(keyword in str(op['Tipo']).lower() for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
+                tipo_str = str(op['Tipo']).lower()
+                if any(keyword in tipo_str for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
                     debug_info.append({
                         'Fecha': op['Fecha'],
                         'Tipo': op['Tipo'],
@@ -510,6 +519,7 @@ def main():
                 st.dataframe(pd.DataFrame(debug_info))
             else:
                 st.warning("⚠️ No se encontraron operaciones de cupones/dividendos")
+                st.write("**Palabras clave buscadas:** cupón, cupon, dividendo, coupon, dividend, interes, interest")
             
             # Calcular análisis de atribución
             attribution = calculator.calculate_attribution_analysis()
