@@ -69,8 +69,6 @@ def load_data():
             help="El archivo debe contener dos hojas: 'Operaciones' y 'Precios'"
         )
     
-    if st.button("Usar Datos de Ejemplo", type="secondary"):
-        st.session_state.use_sample_data = True
     
     # Buscar archivo Excel automáticamente
     excel_files = [f for f in os.listdir('.') if f.endswith('.xlsx')]
@@ -324,6 +322,9 @@ def main():
     st.title("Portfolio Analyzer")
     st.markdown("---")
     
+    # Cargar datos automáticamente
+    operaciones, precios = load_data()
+    
     # Sidebar con configuración
     with st.sidebar:
         st.header("Configuración")
@@ -332,9 +333,26 @@ def main():
         st.subheader("Período de Análisis")
         start_date = st.date_input("Fecha de Inicio", value=datetime.now() - timedelta(days=365))
         end_date = st.date_input("Fecha de Fin", value=datetime.now())
-    
-    # Cargar datos automáticamente
-    operaciones, precios = load_data()
+        
+        # Mostrar información del período filtrado en el sidebar
+        if operaciones is not None and precios is not None:
+            # Filtrar operaciones por período seleccionado
+            operaciones_period = operaciones[
+                (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
+                (operaciones['Fecha'] <= pd.to_datetime(end_date))
+            ]
+            
+            # Crear calculador temporal para verificar activos
+            calculator_temp = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
+            initial_positions = calculator_temp._get_initial_positions(pd.to_datetime(start_date))
+            has_assets_in_portfolio = any(pos['cantidad'] > 0 for pos in initial_positions.values())
+            
+            if not operaciones_period.empty:
+                st.info(f"**Período:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} ({len(operaciones_period)} operaciones)")
+            elif has_assets_in_portfolio:
+                st.info(f"**Período:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} (sin operaciones, pero con activos en cartera)")
+            else:
+                st.warning(f"No hay operaciones ni activos en cartera en el período seleccionado")
     
     if operaciones is not None and precios is not None:
         # Convertir fechas a datetime si no lo están
@@ -360,12 +378,8 @@ def main():
         initial_positions = calculator._get_initial_positions(pd.to_datetime(start_date))
         has_assets_in_portfolio = any(pos['cantidad'] > 0 for pos in initial_positions.values())
         
-        # Mostrar información del período filtrado
-        if not operaciones_period.empty:
-            st.info(f"**Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} ({len(operaciones_period)} operaciones)")
-        elif has_assets_in_portfolio:
-            st.info(f"**Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} (sin operaciones, pero con activos en cartera)")
-        else:
+        # Verificar si hay datos para mostrar
+        if operaciones_period.empty and not has_assets_in_portfolio:
             st.warning(f"No hay operaciones ni activos en cartera en el período seleccionado: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
             return
         
