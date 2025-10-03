@@ -121,6 +121,8 @@ class PortfolioCalculator:
                 elif tipo in ['Cupón', 'Dividendo']:
                     # Cupón/Dividendo: ingresa por cobro, luego sale de la cartera
                     # No afecta cash_flow neto, pero es ganancia realizada
+                    # El monto se suma al rendimiento del activo y de la cartera
+                    # Se considera outflow (salida de efectivo de la cartera)
                     pass
                 
                 elif tipo == 'Flujo':
@@ -174,7 +176,8 @@ class PortfolioCalculator:
             daily_operations = self.operaciones[self.operaciones['Fecha'] == current_date]
             daily_purchases = daily_operations[daily_operations['Tipo'].str.strip() == 'Compra']['Monto'].sum()
             daily_sales = daily_operations[daily_operations['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-            daily_cash_flow = daily_purchases - daily_sales
+            daily_coupons = daily_operations[daily_operations['Tipo'].str.strip().isin(['Cupón', 'Dividendo'])]['Monto'].sum()
+            daily_cash_flow = daily_purchases - daily_sales - daily_coupons
             
             # El primer día con valor > 0 es nuestro valor inicial
             if initial_value is None and current_value > 0:
@@ -337,6 +340,7 @@ class PortfolioCalculator:
             current_quantity = 0  # Cantidad actual en cartera
             weighted_price_sum = 0  # Suma ponderada para precio promedio
             realized_gains = 0  # Ganancias realizadas acumuladas
+            coupon_dividend_income = 0  # Ingresos por cupones y dividendos
             
             # Procesar operaciones históricamente
             for _, op in asset_ops.iterrows():
@@ -364,6 +368,11 @@ class PortfolioCalculator:
                     else:
                         # Ajustar suma ponderada proporcionalmente
                         weighted_price_sum = (weighted_price_sum / (current_quantity + cantidad)) * current_quantity
+                
+                elif tipo in ['Cupón', 'Dividendo']:
+                    # Cupón/Dividendo: se suma al rendimiento del activo
+                    # No afecta la cantidad ni el precio promedio
+                    coupon_dividend_income += monto
             
             if current_quantity > 0:
                 # Calcular precio promedio actual
@@ -380,8 +389,8 @@ class PortfolioCalculator:
                     # Calcular ganancia/pérdida no realizada
                     unrealized_gain = current_value - (current_quantity * avg_purchase_price)
                     
-                    # Calcular ganancia total (realizada + no realizada)
-                    total_gain = realized_gains + unrealized_gain
+                    # Calcular ganancia total (realizada + no realizada + cupones/dividendos)
+                    total_gain = realized_gains + unrealized_gain + coupon_dividend_income
                     
                     # Calcular retorno total
                     total_return = total_gain / total_invested if total_invested > 0 else 0
@@ -454,7 +463,8 @@ class PortfolioCalculator:
                 daily_ops = asset_ops[asset_ops['Fecha'] == current_date]
                 daily_purchases = daily_ops[daily_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
                 daily_sales = daily_ops[daily_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-                daily_cash_flow = daily_purchases - daily_sales
+                daily_coupons = daily_ops[daily_ops['Tipo'].str.strip().isin(['Cupón', 'Dividendo'])]['Monto'].sum()
+                daily_cash_flow = daily_purchases - daily_sales - daily_coupons
                 
                 if previous_value is None and current_value > 0:
                     initial_value = current_value
@@ -513,6 +523,7 @@ class PortfolioCalculator:
                 total_quantity = 0
                 weighted_price_sum = 0
                 realized_gains = 0  # Ganancias realizadas por ventas
+                coupon_dividend_income = 0  # Ingresos por cupones y dividendos
                 
                 # Procesar operaciones históricamente
                 for _, op in asset_ops.iterrows():
@@ -534,6 +545,11 @@ class PortfolioCalculator:
                             # Si se vendió todo, reiniciar
                             total_invested = 0
                             weighted_price_sum = 0
+                    
+                    elif tipo_limpio in ['Cupón', 'Dividendo']:
+                        # Cupón/Dividendo: se suma al rendimiento del activo
+                        # No afecta la cantidad ni el precio promedio
+                        coupon_dividend_income += op['Monto']
                 
                 # Calcular precio promedio actual (solo para cantidad restante)
                 if total_quantity > 0:
@@ -555,9 +571,9 @@ class PortfolioCalculator:
                             total_quantity_original += op['Cantidad']
                     
                     if total_invested_original > 0:
-                        # Rendimiento total = (Valor actual + Ganancias realizadas - Inversión original) / Inversión original
+                        # Rendimiento total = (Valor actual + Ganancias realizadas + Cupones/Dividendos - Inversión original) / Inversión original
                         current_value = total_quantity * row['Precio'] if total_quantity > 0 else 0
-                        total_return = (current_value + realized_gains - total_invested_original) / total_invested_original
+                        total_return = (current_value + realized_gains + coupon_dividend_income - total_invested_original) / total_invested_original
                     else:
                         total_return = 0
                     
