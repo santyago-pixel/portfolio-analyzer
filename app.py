@@ -99,16 +99,6 @@ def load_data():
             # Cargar operaciones (estructura: Fecha, Operacion, Tipo de activo, Activo, Nominales, Precio, Valor)
             operaciones = pd.read_excel(uploaded_file, sheet_name='Operaciones')
             
-            # Debug: mostrar datos crudos del Excel
-            st.write("**🔍 DEBUG - Datos crudos del Excel (primeras 10 filas):**")
-            st.dataframe(operaciones.head(10))
-            
-            # Debug: mostrar tipos únicos en la columna 'Operacion'
-            if 'Operacion' in operaciones.columns:
-                tipos_operacion = operaciones['Operacion'].unique()
-                st.write("**Tipos únicos en columna 'Operacion':**")
-                for i, tipo in enumerate(tipos_operacion):
-                    st.write(f"{i+1}. '{tipo}' (lower: '{str(tipo).lower()}')")
             
             # Mapear columnas a formato esperado
             operaciones_mapped = pd.DataFrame()
@@ -131,9 +121,6 @@ def load_data():
             # Ahora eliminar filas con NaN en columnas críticas
             operaciones_mapped = operaciones_mapped.dropna(subset=['Fecha', 'Tipo', 'Activo', 'Monto'])
             
-            # Debug: mostrar operaciones después del filtrado
-            st.write("**🔍 DEBUG - Operaciones después del filtrado:**")
-            st.dataframe(operaciones_mapped)
             
             # Cargar precios (estructura: fechas en columna A, activos en fila 1)
             precios = pd.read_excel(uploaded_file, sheet_name='Precios')
@@ -517,37 +504,6 @@ def main():
             # Análisis de Atribución
             st.header("🎯 Análisis de Atribución")
             
-            # Debug temporal: mostrar información sobre cupones detectados
-            st.subheader("🔍 Debug - Análisis de Operaciones")
-            
-            # Mostrar todas las operaciones cargadas
-            st.write("**Todas las operaciones cargadas del Excel:**")
-            st.dataframe(operaciones)
-            
-            # Mostrar todos los tipos de operaciones únicos
-            tipos_unicos = operaciones['Tipo'].unique()
-            st.write("**Tipos de operaciones encontrados en el archivo:**")
-            for i, tipo in enumerate(tipos_unicos):
-                st.write(f"{i+1}. '{tipo}' (lower: '{str(tipo).lower()}')")
-            
-            # Buscar cupones con diferentes variaciones
-            debug_info = []
-            for _, op in operaciones.iterrows():
-                tipo_str = str(op['Tipo']).strip().lower()
-                if any(keyword in tipo_str for keyword in ['cupón', 'cupon', 'dividendo', 'coupon', 'dividend', 'interes', 'interest']):
-                    debug_info.append({
-                        'Fecha': op['Fecha'],
-                        'Tipo': op['Tipo'],
-                        'Activo': op['Activo'],
-                        'Monto': op['Monto']
-                    })
-            
-            if debug_info:
-                st.write("**Cupones/Dividendos encontrados:**")
-                st.dataframe(pd.DataFrame(debug_info))
-            else:
-                st.warning("⚠️ No se encontraron operaciones de cupones/dividendos")
-                st.write("**Palabras clave buscadas:** cupón, cupon, dividendo, coupon, dividend, interes, interest")
             
             # Calcular análisis de atribución
             attribution = calculator.calculate_attribution_analysis()
@@ -701,13 +657,19 @@ def main():
                 # Formatear la tabla para mejor visualización
                 display_df = returns_df.copy()
                 
+                # Calcular rendimiento acumulado
+                if 'Rendimiento_Diario' in display_df.columns:
+                    display_df['Rendimiento_Acumulado'] = (1 + display_df['Rendimiento_Diario']).cumprod() - 1
+                
                 # Formatear fechas
                 if 'Fecha' in display_df.columns:
                     display_df['Fecha'] = pd.to_datetime(display_df['Fecha']).dt.strftime('%Y-%m-%d')
                 
                 # Formatear porcentajes
-                if 'Rendimiento_Diario' in display_df.columns:
-                    display_df['Rendimiento_Diario'] = display_df['Rendimiento_Diario'].apply(lambda x: f"{x:.2%}")
+                percentage_cols = ['Rendimiento_Diario', 'Rendimiento_Acumulado']
+                for col in percentage_cols:
+                    if col in display_df.columns:
+                        display_df[col] = display_df[col].apply(lambda x: f"{x:.2%}")
                 
                 # Formatear valores monetarios
                 money_cols = ['Valor_Cartera', 'Valor_Inicial', 'Daily_Cash_Flow', 'Value_Without_Cash_Flow']
