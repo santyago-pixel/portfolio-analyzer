@@ -634,7 +634,47 @@ def main():
                 
                 # Tabla de datos
                 st.header("📋 Datos de Rendimientos")
-                st.dataframe(returns_df.tail(10), use_container_width=True)
+                
+                if returns_df is not None and not returns_df.empty:
+                    # Formatear la tabla para mejor visualización
+                    display_df = returns_df.copy()
+                    
+                    # Formatear fechas
+                    if 'Fecha' in display_df.columns:
+                        display_df['Fecha'] = pd.to_datetime(display_df['Fecha']).dt.strftime('%Y-%m-%d')
+                    
+                    # Formatear porcentajes
+                    if 'Rendimiento_Diario' in display_df.columns:
+                        display_df['Rendimiento_Diario'] = display_df['Rendimiento_Diario'].apply(lambda x: f"{x:.2%}")
+                    
+                    # Formatear valores monetarios
+                    money_cols = ['Valor_Cartera', 'Valor_Inicial']
+                    for col in money_cols:
+                        if col in display_df.columns:
+                            display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")
+                    
+                    st.dataframe(display_df.tail(10), use_container_width=True)
+                    
+                    # Mostrar estadísticas resumidas
+                    st.subheader("📊 Resumen de Rendimientos")
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        if 'Rendimiento_Diario' in returns_df.columns:
+                            avg_return = returns_df['Rendimiento_Diario'].mean()
+                            st.metric("Rendimiento Promedio Diario", f"{avg_return:.2%}")
+                    
+                    with col2:
+                        if 'Rendimiento_Diario' in returns_df.columns:
+                            volatility = returns_df['Rendimiento_Diario'].std()
+                            st.metric("Volatilidad Diaria", f"{volatility:.2%}")
+                    
+                    with col3:
+                        if 'Valor_Cartera' in returns_df.columns:
+                            total_return = (returns_df['Valor_Cartera'].iloc[-1] - returns_df['Valor_Cartera'].iloc[0]) / returns_df['Valor_Cartera'].iloc[0]
+                            st.metric("Rendimiento Total", f"{total_return:.2%}")
+                else:
+                    st.warning("No hay datos de rendimientos disponibles.")
     
     else:
         # Mostrar información de ejemplo
