@@ -663,7 +663,7 @@ def main():
                         if col in display_df.columns:
                             display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")
                     
-                    st.dataframe(display_df.tail(10), use_container_width=True)
+                    st.dataframe(display_df, use_container_width=True)
                     
                     # Mostrar estadísticas resumidas
                     st.subheader("📊 Resumen de Rendimientos")
