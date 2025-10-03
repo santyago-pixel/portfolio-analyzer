@@ -408,34 +408,31 @@ def main():
     operaciones, precios = load_data()
     
     if operaciones is not None and precios is not None:
-        # Aplicar filtro de fechas
-        operaciones_filtered = operaciones.copy()
-        precios_filtered = precios.copy()
-        
         # Convertir fechas a datetime si no lo están
-        operaciones_filtered['Fecha'] = pd.to_datetime(operaciones_filtered['Fecha'])
-        precios_filtered['Fecha'] = pd.to_datetime(precios_filtered['Fecha'])
+        operaciones['Fecha'] = pd.to_datetime(operaciones['Fecha'])
+        precios['Fecha'] = pd.to_datetime(precios['Fecha'])
         
-        # Filtrar por período seleccionado
-        operaciones_filtered = operaciones_filtered[
-            (operaciones_filtered['Fecha'] >= pd.to_datetime(start_date)) & 
-            (operaciones_filtered['Fecha'] <= pd.to_datetime(end_date))
+        # Filtrar precios por período seleccionado (solo para visualización)
+        precios_filtered = precios[
+            (precios['Fecha'] >= pd.to_datetime(start_date)) & 
+            (precios['Fecha'] <= pd.to_datetime(end_date))
         ]
         
-        precios_filtered = precios_filtered[
-            (precios_filtered['Fecha'] >= pd.to_datetime(start_date)) & 
-            (precios_filtered['Fecha'] <= pd.to_datetime(end_date))
+        # Filtrar operaciones por período seleccionado (solo para visualización)
+        operaciones_period = operaciones[
+            (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
+            (operaciones['Fecha'] <= pd.to_datetime(end_date))
         ]
         
         # Mostrar información del período filtrado
-        if not operaciones_filtered.empty:
-            st.info(f"📅 **Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} ({len(operaciones_filtered)} operaciones)")
+        if not operaciones_period.empty:
+            st.info(f"📅 **Período de Análisis:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} ({len(operaciones_period)} operaciones)")
         else:
             st.warning(f"⚠️ No hay operaciones en el período seleccionado: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
             return
         
-        # Crear calculador de cartera con datos filtrados
-        calculator = PortfolioCalculator(operaciones_filtered, precios_filtered)
+        # Crear calculador de cartera con TODOS los datos y fecha de inicio
+        calculator = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
         
         # Calcular rendimientos diarios
         returns_df = calculator.calculate_daily_returns()

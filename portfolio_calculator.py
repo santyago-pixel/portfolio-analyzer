@@ -10,9 +10,10 @@ from typing import Dict, List, Tuple, Optional
 class PortfolioCalculator:
     """Calculadora avanzada de métricas de cartera"""
     
-    def __init__(self, operaciones: pd.DataFrame, precios: pd.DataFrame):
+    def __init__(self, operaciones: pd.DataFrame, precios: pd.DataFrame, start_date: pd.Timestamp = None):
         self.operaciones = operaciones.copy()
         self.precios = precios.copy()
+        self.start_date = start_date
         self.portfolio_data = None
         self.daily_returns = None
         self.metrics = None
@@ -75,22 +76,75 @@ class PortfolioCalculator:
         self.operaciones = self.operaciones.sort_values('Fecha')
         
         # Crear índice de fechas únicas
+        min_date = self.precios['Fecha'].min()
+        max_date = self.precios['Fecha'].max()
+        
+        # Si se especifica una fecha de inicio, usarla como mínimo
+        if self.start_date is not None:
+            min_date = max(min_date, self.start_date)
+        
         self.date_range = pd.date_range(
-            start=self.precios['Fecha'].min(),
-            end=self.precios['Fecha'].max(),
+            start=min_date,
+            end=max_date,
             freq='D'
         )
     
+    def _get_initial_positions(self, start_date: pd.Timestamp) -> dict:
+        """Obtener las posiciones iniciales a una fecha específica"""
+        # Obtener todas las operaciones hasta la fecha de inicio
+        ops_until_start = self.operaciones[self.operaciones['Fecha'] < start_date]
+        
+        positions = {}
+        for _, op in ops_until_start.iterrows():
+            asset = op['Activo']
+            tipo = str(op['Tipo']).strip()
+            cantidad = op['Cantidad']
+            precio = op['Precio_Concertacion']
+            
+            if asset not in positions:
+                positions[asset] = {'cantidad': 0, 'precio_promedio': 0}
+            
+            if tipo == 'Compra':
+                old_qty = positions[asset]['cantidad']
+                old_avg = positions[asset]['precio_promedio']
+                
+                new_qty = old_qty + cantidad
+                if new_qty > 0:
+                    new_avg = (old_qty * old_avg + cantidad * precio) / new_qty
+                else:
+                    new_avg = precio
+                
+                positions[asset]['cantidad'] = new_qty
+                positions[asset]['precio_promedio'] = new_avg
+                
+            elif tipo == 'Venta':
+                positions[asset]['cantidad'] -= cantidad
+        
+        return positions
+
     def calculate_portfolio_value(self) -> pd.DataFrame:
         """Calcular el valor de la cartera por día"""
         portfolio_values = []
         
+        # Obtener posiciones iniciales si hay fecha de inicio
+        initial_positions = {}
+        if self.start_date is not None:
+            initial_positions = self._get_initial_positions(self.start_date)
+        
         for date in self.date_range:
             # Obtener operaciones hasta esta fecha
-            ops_until_date = self.operaciones[self.operaciones['Fecha'] <= date]
+            if self.start_date is not None:
+                # Si hay fecha de inicio, solo considerar operaciones desde esa fecha
+                ops_until_date = self.operaciones[
+                    (self.operaciones['Fecha'] <= date) & 
+                    (self.operaciones['Fecha'] >= self.start_date)
+                ]
+            else:
+                ops_until_date = self.operaciones[self.operaciones['Fecha'] <= date]
             
             # Calcular posición actual de cada activo
-            positions = {}
+            # Empezar con las posiciones iniciales si existen
+            positions = initial_positions.copy()
             cash_flow = 0
             
             for _, op in ops_until_date.iterrows():
