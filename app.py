@@ -566,9 +566,9 @@ def main():
                         fig_returns = px.bar(
                             asset_stats,
                             x='Activo',
-                            y='Rendimiento_Total',
+                            y='Retorno_Total',
                             title="Rendimiento Total por Activo",
-                            color='Rendimiento_Total',
+                            color='Retorno_Total',
                             color_continuous_scale=['red', 'yellow', 'green']
                         )
                         fig_returns.update_layout(yaxis_tickformat='.1%')
