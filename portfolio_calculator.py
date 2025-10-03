@@ -314,47 +314,76 @@ class PortfolioCalculator:
             # Obtener operaciones del activo
             asset_ops = self.operaciones[self.operaciones['Activo'] == asset]
             
-            # Calcular posición promedio
-            total_invested = 0
-            total_quantity = 0
+            # Usar la misma lógica que calculate_positions_summary para consistencia
+            total_invested = 0  # Inversión total original (solo compras)
+            current_quantity = 0  # Cantidad actual en cartera
+            weighted_price_sum = 0  # Suma ponderada para precio promedio
+            realized_gains = 0  # Ganancias realizadas acumuladas
             
+            # Procesar operaciones históricamente
             for _, op in asset_ops.iterrows():
-                if op['Tipo'] == 'Compra':
-                    total_invested += op['Monto']
-                    total_quantity += op['Cantidad']
-                elif op['Tipo'] == 'Venta':
-                    total_invested -= op['Monto']
-                    total_quantity -= op['Cantidad']
+                tipo = str(op['Tipo']).strip()
+                cantidad = op['Cantidad']
+                precio_op = op['Precio_Concertacion']
+                monto = op['Monto']
+                
+                if tipo == 'Compra':
+                    total_invested += monto
+                    current_quantity += cantidad
+                    weighted_price_sum += cantidad * precio_op
+                elif tipo == 'Venta':
+                    if current_quantity > 0:
+                        # Calcular precio promedio al momento de la venta
+                        avg_price_at_sale = weighted_price_sum / current_quantity
+                        # Calcular ganancia/pérdida de la venta
+                        sale_gain = (precio_op - avg_price_at_sale) * cantidad
+                        realized_gains += sale_gain
+                    
+                    current_quantity -= cantidad
+                    if current_quantity <= 0:
+                        current_quantity = 0
+                        weighted_price_sum = 0
+                    else:
+                        # Ajustar suma ponderada proporcionalmente
+                        weighted_price_sum = (weighted_price_sum / (current_quantity + cantidad)) * current_quantity
             
-            if total_quantity > 0:
-                avg_price = total_invested / total_quantity
+            if current_quantity > 0:
+                # Calcular precio promedio actual
+                avg_purchase_price = weighted_price_sum / current_quantity if current_quantity > 0 else 0
                 
                 # Obtener precio actual (verificar que existan datos)
                 asset_prices = self.precios[self.precios['Activo'] == asset]
                 if not asset_prices.empty and len(asset_prices) > 0:
                     current_price = asset_prices['Precio'].iloc[-1]
-                    first_price = asset_prices['Precio'].iloc[0]
                     
-                    # Calcular retorno del activo desde el inicio
-                    asset_return = (current_price - avg_price) / avg_price if avg_price > 0 else 0
-                    total_return = (current_price - first_price) / first_price if first_price > 0 else 0
+                    # Calcular valor actual de la posición
+                    current_value = current_quantity * current_price
+                    
+                    # Calcular ganancia/pérdida no realizada
+                    unrealized_gain = current_value - (current_quantity * avg_purchase_price)
+                    
+                    # Calcular ganancia total (realizada + no realizada)
+                    total_gain = realized_gains + unrealized_gain
+                    
+                    # Calcular retorno total
+                    total_return = total_gain / total_invested if total_invested > 0 else 0
                     
                     # Calcular contribución al portfolio
-                    current_value = total_quantity * current_price
                     portfolio_value = self.portfolio_data['Valor_Cartera'].iloc[-1] if not self.portfolio_data.empty and len(self.portfolio_data) > 0 else 1
                     weight = current_value / portfolio_value if portfolio_value > 0 else 0
                     
                     attribution_data.append({
                         'Activo': asset,
                         'Peso': weight,
-                        'Retorno_vs_Costo': asset_return,
+                        'Retorno_vs_Costo': total_return,
                         'Retorno_Total': total_return,
-                        'Contribucion': weight * asset_return,
+                        'Contribucion': weight * total_return,
                         'Valor_Actual': current_value,
-                        'Precio_Promedio': avg_price,
+                        'Precio_Promedio': avg_purchase_price,
                         'Precio_Actual': current_price,
-                        'Precio_Inicial': first_price,
-                        'Cantidad': total_quantity,
+                        'Cantidad': current_quantity,
+                        'Ganancias_Realizadas': realized_gains,
+                        'Ganancias_No_Realizadas': unrealized_gain,
                         'Inversion_Total': total_invested
                     })
         
