@@ -152,14 +152,14 @@ class PortfolioCalculator:
         return pd.DataFrame(portfolio_values)
     
     def calculate_daily_returns(self) -> pd.DataFrame:
-        """Calcular rendimientos diarios de la cartera"""
+        """Calcular rendimientos diarios de la cartera excluyendo flujos de cash"""
         if self.portfolio_data is None:
             self.portfolio_data = self.calculate_portfolio_value()
         
         # Obtener valores de la cartera
         portfolio_data = self.portfolio_data.copy()
         
-        # Calcular rendimientos considerando que el valor inicial es después de las compras del primer día
+        # Calcular rendimientos excluyendo flujos de cash
         returns = []
         initial_value = None
         previous_value = None
@@ -179,8 +179,16 @@ class PortfolioCalculator:
                 if current_value > 0:
                     previous_value = current_value
             else:
-                # Calcular rendimiento diario normal (incluye movimientos de precios de activos existentes)
-                daily_return = (current_value - previous_value) / previous_value
+                # Calcular flujos de cash del día
+                daily_operations = self.operaciones[self.operaciones['Fecha'] == current_date]
+                daily_purchases = daily_operations[daily_operations['Tipo'].str.strip() == 'Compra']['Monto'].sum()
+                daily_sales = daily_operations[daily_operations['Tipo'].str.strip() == 'Venta']['Monto'].sum()
+                daily_cash_flow = daily_purchases - daily_sales
+                
+                # Calcular rendimiento excluyendo flujos de cash
+                # El rendimiento es solo por movimientos de precios de activos existentes
+                value_without_cash_flow = current_value - daily_cash_flow
+                daily_return = (value_without_cash_flow - previous_value) / previous_value
                 previous_value = current_value
             
             returns.append(daily_return)
