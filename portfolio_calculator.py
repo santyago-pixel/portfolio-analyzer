@@ -179,18 +179,9 @@ class PortfolioCalculator:
                 if current_value > 0:
                     previous_value = current_value
             else:
-                # Verificar si hubo compras en este día
-                daily_operations = self.operaciones[self.operaciones['Fecha'] == current_date]
-                daily_purchases = daily_operations[daily_operations['Tipo'].str.strip() == 'Compra']['Monto'].sum()
-                
-                if daily_purchases > 0:
-                    # Si hubo compras, el rendimiento es 0 (las compras no son rendimiento)
-                    daily_return = 0.0
-                    previous_value = current_value
-                else:
-                    # Calcular rendimiento diario normal (solo por movimiento de precios)
-                    daily_return = (current_value - previous_value) / previous_value
-                    previous_value = current_value
+                # Calcular rendimiento diario normal (incluye movimientos de precios de activos existentes)
+                daily_return = (current_value - previous_value) / previous_value
+                previous_value = current_value
             
             returns.append(daily_return)
         
