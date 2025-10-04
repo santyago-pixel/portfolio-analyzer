@@ -41,10 +41,14 @@ st.markdown("""
         font-size: 2rem;
         font-weight: bold;
         margin: 0.5rem 0;
+        text-align: center;
+        color: white;
     }
     .metric-label {
         font-size: 0.9rem;
         opacity: 0.9;
+        color: white;
+        text-align: center;
     }
     .positive {
         color: #00C851;
@@ -423,11 +427,18 @@ def main():
                     """, unsafe_allow_html=True)
                 
                 with col4:
+                    # Calcular cupones y dividendos del período
+                    cupones_dividendos = 0
+                    if operaciones is not None:
+                        # Filtrar operaciones de cupones y dividendos
+                        cupon_dividendo_mask = operaciones['Tipo'].str.strip().str.lower().str.contains('cupon|dividendo|coupon|dividend', na=False)
+                        cupones_dividendos = operaciones[cupon_dividendo_mask]['Monto'].sum()
+                    
                     st.markdown(f"""
                     <div class="metric-card">
-                        <div class="metric-label">Sharpe Ratio</div>
-                        <div class="metric-value {'positive' if metrics['sharpe_ratio'] > 0 else 'negative'}">
-                            {metrics['sharpe_ratio']:.2f}
+                        <div class="metric-label">Cupones y Dividendos del período</div>
+                        <div class="metric-value">
+                            ${cupones_dividendos:,.2f}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -486,16 +497,6 @@ def main():
             )
             
             st.plotly_chart(fig_cumulative, use_container_width=True)
-            
-            # Gráfico de rendimientos diarios
-            fig_daily = px.line(
-                returns_df, 
-                x='Fecha', 
-                y='Rendimiento_Diario',
-                title="Rendimientos Diarios"
-            )
-            fig_daily.update_layout(template="plotly_white")
-            st.plotly_chart(fig_daily, use_container_width=True)
             
             
             # Calcular análisis de atribución
