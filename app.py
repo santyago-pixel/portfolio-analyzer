@@ -561,12 +561,6 @@ def main():
                         ]
                         current_price = asset_prices.iloc[-1]['Precio'] if not asset_prices.empty else 0
                         
-                        # Calcular monto invertido (compras - ventas) en el período
-                        period_asset_ops = period_operations[period_operations['Activo'] == asset]
-                        purchases = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
-                        sales = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-                        invested_amount = purchases - sales
-                        
                         # Encontrar la última fecha en que el saldo de nominales pasa de cero a positivo durante el período
                         entry_date = None
                         running_nominals = 0
@@ -608,6 +602,17 @@ def main():
                         ]['Monto'].sum()
                         
                         total_cobros = dividendos_cupones + amortizaciones
+                        
+                        # Calcular monto invertido desde la fecha de entrada (misma lógica que cobros)
+                        invested_ops = operaciones[
+                            (operaciones['Activo'] == asset) & 
+                            (operaciones['Fecha'] >= entry_date) & 
+                            (operaciones['Fecha'] <= pd.to_datetime(end_date))
+                        ]
+                        
+                        purchases = invested_ops[invested_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
+                        sales = invested_ops[invested_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
+                        invested_amount = purchases - sales
                         
                         # Calcular ganancia neta: Monto - Invertido + Dividendos Cupones Amortizaciones
                         monto_actual = final_nominals * current_price
