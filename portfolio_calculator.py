@@ -146,7 +146,7 @@ class PortfolioCalculator:
                 # Si hay fecha de inicio, solo considerar operaciones desde esa fecha
                 ops_until_date = self.operaciones[
                     (self.operaciones['Fecha'] <= date) & 
-                    (self.operaciones['Fecha'] >= self.start_date)
+                    (self.operaciones['Fecha'] > self.start_date)
                 ]
             else:
                 ops_until_date = self.operaciones[self.operaciones['Fecha'] <= date]
