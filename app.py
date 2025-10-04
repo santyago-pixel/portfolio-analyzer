@@ -567,13 +567,41 @@ def main():
                         sales = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
                         invested_amount = purchases - sales
                         
-                        # Calcular dividendos, cupones y amortizaciones en el período
-                        dividendos_cupones = period_asset_ops[
-                            period_asset_ops['Tipo'].str.strip().str.lower().str.contains('cupon|dividendo|coupon|dividend|interes|interest', na=False)
+                        # Encontrar la última fecha en que el saldo de nominales pasa de cero a positivo durante el período
+                        entry_date = None
+                        running_nominals = 0
+                        
+                        # Obtener todas las operaciones del activo ordenadas por fecha
+                        all_asset_ops = operaciones[operaciones['Activo'] == asset].sort_values('Fecha')
+                        
+                        for _, op in all_asset_ops.iterrows():
+                            if str(op['Tipo']).strip() == 'Compra':
+                                running_nominals += op['Cantidad']
+                            elif str(op['Tipo']).strip() == 'Venta':
+                                running_nominals -= op['Cantidad']
+                            
+                            # Si estamos en el período y el saldo pasa de 0 a positivo, guardar la fecha
+                            if (pd.to_datetime(start_date) <= op['Fecha'] <= pd.to_datetime(end_date) and 
+                                running_nominals > 0 and entry_date is None):
+                                entry_date = op['Fecha']
+                        
+                        # Si no se encontró entrada en el período, usar la fecha de inicio del período
+                        if entry_date is None:
+                            entry_date = pd.to_datetime(start_date)
+                        
+                        # Calcular dividendos, cupones y amortizaciones desde la fecha de entrada
+                        cobros_ops = operaciones[
+                            (operaciones['Activo'] == asset) & 
+                            (operaciones['Fecha'] >= entry_date) & 
+                            (operaciones['Fecha'] <= pd.to_datetime(end_date))
+                        ]
+                        
+                        dividendos_cupones = cobros_ops[
+                            cobros_ops['Tipo'].str.strip().str.lower().str.contains('cupon|dividendo|coupon|dividend|interes|interest', na=False)
                         ]['Monto'].sum()
                         
-                        amortizaciones = period_asset_ops[
-                            period_asset_ops['Tipo'].str.strip().str.lower().str.contains('amortización|amortizacion|amortization', na=False)
+                        amortizaciones = cobros_ops[
+                            cobros_ops['Tipo'].str.strip().str.lower().str.contains('amortización|amortizacion|amortization', na=False)
                         ]['Monto'].sum()
                         
                         total_cobros = dividendos_cupones + amortizaciones
