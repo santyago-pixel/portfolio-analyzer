@@ -528,17 +528,17 @@ def main():
                 # Crear tabla con activos que tuvieron nominales positivos durante el período
                 assets_table_data = []
                 
-                # Obtener todos los activos únicos del período
+                # Obtener operaciones del período para cálculos específicos
                 period_operations = operaciones[
                     (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
                     (operaciones['Fecha'] <= pd.to_datetime(end_date))
                 ]
                 
-                # Obtener activos que tuvieron operaciones en el período
-                period_assets = period_operations['Activo'].unique()
-                period_assets = [asset for asset in period_assets if pd.notna(asset)]
+                # Obtener TODOS los activos únicos (no solo los del período)
+                all_assets = operaciones['Activo'].unique()
+                all_assets = [asset for asset in all_assets if pd.notna(asset)]
                 
-                for asset in period_assets:
+                for asset in all_assets:
                     # Calcular nominales al final del período
                     final_nominals = 0
                     
