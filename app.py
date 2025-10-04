@@ -400,7 +400,7 @@ def main():
                     st.markdown(f"""
                     <div class="metric-card">
                         <div class="metric-label">Rendimiento Total</div>
-                        <div class="metric-value {'positive' if cumulative_return > 0 else 'negative'}">
+                        <div class="metric-value">
                             {cumulative_return:.2%}
                         </div>
                     </div>
@@ -410,7 +410,7 @@ def main():
                     st.markdown(f"""
                     <div class="metric-card">
                         <div class="metric-label">Rendimiento Anualizado</div>
-                        <div class="metric-value {'positive' if metrics['annualized_return'] > 0 else 'negative'}">
+                        <div class="metric-value">
                             {metrics['annualized_return']:.2%}
                         </div>
                     </div>
@@ -438,7 +438,7 @@ def main():
                     <div class="metric-card">
                         <div class="metric-label">Cupones y Dividendos del período</div>
                         <div class="metric-value">
-                            ${cupones_dividendos:,.2f}
+                            ${cupones_dividendos:,.0f}
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -577,7 +577,7 @@ def main():
                         y='Retorno_Total',
                         title="Rendimiento Total por Activo",
                         color='Retorno_Total',
-                        color_continuous_scale=['red', 'yellow', 'green']
+                        color_continuous_scale=['#708090', '#87CEEB', '#B0C4DE', '#E0E0E0']
                     )
                     fig_returns.update_layout(yaxis_tickformat='.1%')
                     st.plotly_chart(fig_returns, use_container_width=True)
@@ -589,7 +589,7 @@ def main():
                         y='Contribucion',
                         title="Contribución al Portfolio por Activo",
                         color='Contribucion',
-                        color_continuous_scale=['red', 'yellow', 'green']
+                        color_continuous_scale=['#708090', '#87CEEB', '#B0C4DE', '#E0E0E0']
                     )
                     fig_contribution.update_layout(yaxis_tickformat='.1%')
                     st.plotly_chart(fig_contribution, use_container_width=True)
