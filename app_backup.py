@@ -565,35 +565,7 @@ def main():
                         period_asset_ops = period_operations[period_operations['Activo'] == asset]
                         purchases = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
                         sales = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-                        # Calcular valor de posiciones al inicio del período
-                        initial_nominals = 0
-                        initial_invested = 0
-                        
-                        # Obtener todas las operaciones del activo hasta el inicio del período
-                        asset_ops_until_start = operaciones[
-                            (operaciones["Activo"] == asset) & 
-                            (operaciones["Fecha"] <= pd.to_datetime(start_date))
-                        ]
-                        
-                        for _, op in asset_ops_until_start.iterrows():
-                            if str(op["Tipo"]).strip() == "Compra":
-                                initial_nominals += op["Cantidad"]
-                                initial_invested += op["Monto"]
-                            elif str(op["Tipo"]).strip() == "Venta":
-                                initial_nominals -= op["Cantidad"]
-                                initial_invested -= op["Monto"]
-                        
-                        # Si hay nominales al inicio, calcular el valor invertido proporcional
-                        if initial_nominals > 0:
-                            # Calcular precio promedio de compra al inicio
-                            initial_avg_price = initial_invested / initial_nominals if initial_nominals > 0 else 0
-                            # El monto invertido al inicio es proporcional a los nominales que quedan al final
-                            initial_invested_proportional = (initial_nominals * initial_avg_price) if initial_nominals > 0 else 0
-                        else:
-                            initial_invested_proportional = 0
-                        
-                        # Monto total invertido = valor al inicio + compras - ventas en el período
-                        invested_amount = initial_invested_proportional + purchases - sales
+                        invested_amount = purchases - sales
                         
                         # Calcular dividendos, cupones y amortizaciones en el período
                         dividendos_cupones = period_asset_ops[
