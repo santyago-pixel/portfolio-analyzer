@@ -456,13 +456,20 @@ def main():
                     """, unsafe_allow_html=True)
                 
                 with col4:
-                    # Calcular cupones y dividendos del período
+                    # Calcular cupones y dividendos del período usando datos ya filtrados
                     cupones_dividendos = 0
-                    if operaciones is not None:
+                    if 'Cupones_Diarios' in returns_df.columns:
+                        # Usar datos ya filtrados por el período (misma lógica que Rendimiento Total)
+                        cupones_dividendos = returns_df['Cupones_Diarios'].sum()
+                    elif operaciones is not None:
+                        # Fallback: filtrar operaciones por período seleccionado
+                        ops_periodo = operaciones[
+                            (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
+                            (operaciones['Fecha'] <= pd.to_datetime(end_date))
+                        ]
                         # Filtrar operaciones de cupones y dividendos
-                        cupon_dividendo_mask = operaciones['Tipo'].str.strip().str.lower().str.contains('cupon|dividendo|coupon|dividend', na=False)
-                        cupones_dividendos = operaciones[cupon_dividendo_mask]['Monto'].sum()
-                    
+                        cupon_dividendo_mask = ops_periodo['Tipo'].str.strip().str.lower().str.contains('cupon|dividendo|coupon|dividend', na=False)
+                        cupones_dividendos = ops_periodo[cupon_dividendo_mask]['Monto'].sum()                    
                     st.markdown(f"""
                     <div class="metric-card">
                         <div class="metric-label">Cupones y Dividendos del período</div>
