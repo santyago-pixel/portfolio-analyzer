@@ -445,7 +445,7 @@ def main():
                 x=returns_df['Fecha'],
                 y=returns_df['Valor_Cartera'],
                 mode='lines',
-                name='Valor de la Cartera',
+                name='Evolución del Capital Invertido',
                 line=dict(color='#1f77b4', width=2),
                 yaxis='y'
             ))
@@ -461,7 +461,7 @@ def main():
                     y=returns_df['Rendimiento_Acumulado'] * 100,  # Convertir a porcentaje
                     mode='lines',
                     name='Rendimiento Acumulado (%)',
-                    line=dict(color='#ff7f0e', width=2, dash='dash'),
+                    line=dict(color='#00BFFF', width=2),  # Celeste continua
                     yaxis='y2'
                 ))
             
@@ -697,26 +697,6 @@ def main():
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         key="download_excel_file"
                     )
-                
-                # Mostrar estadísticas resumidas
-                st.subheader("Resumen de Rendimientos")
-                col1, col2, col3 = st.columns(3)
-                
-                with col1:
-                    if 'Rendimiento_Diario' in returns_df.columns:
-                        avg_return = returns_df['Rendimiento_Diario'].mean()
-                        st.metric("Rendimiento Promedio Diario", f"{avg_return:.2%}")
-                
-                with col2:
-                    if 'Rendimiento_Diario' in returns_df.columns:
-                        volatility = returns_df['Rendimiento_Diario'].std()
-                        st.metric("Volatilidad Diaria", f"{volatility:.2%}")
-                
-                with col3:
-                    if 'Rendimiento_Diario' in returns_df.columns:
-                        # Usar el mismo cálculo que la tabla para consistencia
-                        cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
-                        st.metric("Rendimiento Total", f"{cumulative_return:.2%}")
             else:
                 st.warning("No hay datos de rendimientos disponibles.")
     
