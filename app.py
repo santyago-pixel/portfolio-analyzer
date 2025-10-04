@@ -320,6 +320,11 @@ def main():
     with st.sidebar:
         st.header("Configuración")
         
+        # Período de análisis
+        st.subheader("Período de Análisis")
+        start_date = st.date_input("Fecha de Inicio", value=datetime.now() - timedelta(days=365))
+        end_date = st.date_input("Fecha de Fin", value=datetime.now())
+        
         # Carga de archivos
         st.subheader("Carga de Datos")
         uploaded_file = st.file_uploader(
@@ -334,11 +339,6 @@ def main():
             st.success(f"📁 Archivo cargado: {uploaded_file.name}")
         else:
             st.info("📁 Usando archivo por defecto: operaciones.xlsx")
-        
-        # Período de análisis
-        st.subheader("Período de Análisis")
-        start_date = st.date_input("Fecha de Inicio", value=datetime.now() - timedelta(days=365))
-        end_date = st.date_input("Fecha de Fin", value=datetime.now())
         
     # Cargar datos (usando archivo subido si está disponible, sino el por defecto)
     operaciones, precios = load_data(uploaded_file)
