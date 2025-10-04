@@ -433,9 +433,21 @@ def main():
                 # Mostrar métricas principales
                 st.header("Rendimiento de la Cartera")
                 
-                col1, col2, col3, col4 = st.columns(4)
+                col1, col2, col3, col4, col5 = st.columns(5)
                 
                 with col1:
+                    # Valor de la cartera (última fecha de la tabla detalle de rendimientos)
+                    portfolio_value = returns_df['Valor_Cartera'].iloc[-1] if not returns_df.empty else 0
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Valor de la Cartera</div>
+                        <div class="metric-value">
+                            ${portfolio_value:,.0f}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                with col2:
                     # Calcular rendimiento total usando la misma fórmula que la última sección
                     if 'Rendimiento_Diario' in returns_df.columns:
                         cumulative_return = (1 + returns_df['Rendimiento_Diario']).prod() - 1
@@ -450,7 +462,7 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                with col2:
+                with col3:
                     # Calcular amortizaciones del período usando datos ya filtrados
                     amortizaciones = 0
                     if 'Amortizaciones_Diarias' in returns_df.columns:
@@ -475,7 +487,7 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                with col3:
+                with col4:
                     st.markdown(f"""
                     <div class="metric-card">
                         <div class="metric-label">Volatilidad</div>
@@ -485,7 +497,7 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
-                with col4:
+                with col5:
                     # Calcular cupones y dividendos del período usando datos ya filtrados
                     cupones_dividendos = 0
                     if 'Cupones_Diarios' in returns_df.columns:
