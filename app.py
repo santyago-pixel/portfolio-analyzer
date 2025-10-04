@@ -7,6 +7,8 @@ from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import warnings
 import os
+import io
+from io import BytesIO
 warnings.filterwarnings('ignore')
 
 # Importar módulos personalizados
@@ -343,26 +345,6 @@ def main():
     # Cargar datos (usando archivo subido si está disponible, sino el por defecto)
     operaciones, precios = load_data(uploaded_file)
     
-    # Mostrar información del período filtrado en el sidebar
-    with st.sidebar:
-        if operaciones is not None and precios is not None:
-            # Filtrar operaciones por período seleccionado
-            operaciones_period = operaciones[
-                (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
-                (operaciones['Fecha'] <= pd.to_datetime(end_date))
-            ]
-            
-            # Crear calculador temporal para verificar activos
-            calculator_temp = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
-            initial_positions = calculator_temp._get_initial_positions(pd.to_datetime(start_date))
-            has_assets_in_portfolio = any(pos['cantidad'] > 0 for pos in initial_positions.values())
-            
-            if not operaciones_period.empty:
-                st.info(f"**Período:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} ({len(operaciones_period)} operaciones)")
-            elif has_assets_in_portfolio:
-                st.info(f"**Período:** {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')} (sin operaciones, pero con activos en cartera)")
-            else:
-                st.warning(f"No hay operaciones ni activos en cartera en el período seleccionado")
     
     if operaciones is not None and precios is not None:
         # Convertir fechas a datetime si no lo están
@@ -635,6 +617,37 @@ def main():
                         display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")
                 
                 st.dataframe(display_df, use_container_width=True)
+                
+                # Botón de descarga en Excel
+                if st.button("📥 Descargar Datos de Rendimientos (Excel)", key="download_returns_excel"):
+                    # Crear archivo Excel en memoria
+                    output = BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        # Hoja con datos de rendimientos (sin formatear para mantener valores numéricos)
+                        returns_df.to_excel(writer, sheet_name='Datos_Rendimientos', index=False)
+                        
+                        # Hoja con estadísticas resumidas
+                        stats_data = {
+                            'Métrica': ['Rendimiento Promedio Diario', 'Volatilidad Diaria', 'Rendimiento Total'],
+                            'Valor': [
+                                f"{returns_df['Rendimiento_Diario'].mean():.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A",
+                                f"{returns_df['Rendimiento_Diario'].std():.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A",
+                                f"{(1 + returns_df['Rendimiento_Diario']).prod() - 1:.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A"
+                            ]
+                        }
+                        stats_df = pd.DataFrame(stats_data)
+                        stats_df.to_excel(writer, sheet_name='Estadisticas', index=False)
+                    
+                    output.seek(0)
+                    
+                    # Descargar archivo
+                    st.download_button(
+                        label="💾 Descargar archivo Excel",
+                        data=output.getvalue(),
+                        file_name=f"datos_rendimientos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key="download_excel_file"
+                    )
                 
                 # Mostrar estadísticas resumidas
                 st.subheader("Resumen de Rendimientos")
