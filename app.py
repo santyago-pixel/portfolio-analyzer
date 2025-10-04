@@ -437,14 +437,58 @@ def main():
             # Análisis Visual
             st.header("Análisis Visual")
             
-            # Gráfico de rendimientos acumulados
-            fig_cumulative = px.line(
-                returns_df, 
-                x='Fecha', 
-                y='Valor_Cartera',
-                title="Evolución del Valor de la Cartera"
+            # Gráfico de evolución del valor de la cartera con rendimiento acumulado
+            fig_cumulative = go.Figure()
+            
+            # Agregar serie de valor de cartera (eje izquierdo)
+            fig_cumulative.add_trace(go.Scatter(
+                x=returns_df['Fecha'],
+                y=returns_df['Valor_Cartera'],
+                mode='lines',
+                name='Valor de la Cartera',
+                line=dict(color='#1f77b4', width=2),
+                yaxis='y'
+            ))
+            
+            # Calcular rendimiento acumulado si no existe
+            if 'Rendimiento_Acumulado' not in returns_df.columns and 'Rendimiento_Diario' in returns_df.columns:
+                returns_df['Rendimiento_Acumulado'] = (1 + returns_df['Rendimiento_Diario']).cumprod() - 1
+            
+            # Agregar serie de rendimiento acumulado (eje derecho)
+            if 'Rendimiento_Acumulado' in returns_df.columns:
+                fig_cumulative.add_trace(go.Scatter(
+                    x=returns_df['Fecha'],
+                    y=returns_df['Rendimiento_Acumulado'] * 100,  # Convertir a porcentaje
+                    mode='lines',
+                    name='Rendimiento Acumulado (%)',
+                    line=dict(color='#ff7f0e', width=2, dash='dash'),
+                    yaxis='y2'
+                ))
+            
+            # Configurar layout con dos ejes Y
+            fig_cumulative.update_layout(
+                title="Evolución del Valor de la Cartera y Rendimiento Acumulado",
+                template="plotly_white",
+                xaxis=dict(title="Fecha"),
+                yaxis=dict(
+                    title="Valor de la Cartera ($)",
+                    side="left",
+                    showgrid=True
+                ),
+                yaxis2=dict(
+                    title="Rendimiento Acumulado (%)",
+                    side="right",
+                    overlaying="y",
+                    showgrid=False,
+                    tickformat='.1f'
+                ),
+                legend=dict(
+                    x=0.02,
+                    y=0.98,
+                    bgcolor="rgba(255,255,255,0.8)"
+                )
             )
-            fig_cumulative.update_layout(template="plotly_white")
+            
             st.plotly_chart(fig_cumulative, use_container_width=True)
             
             # Gráfico de rendimientos diarios
@@ -623,8 +667,13 @@ def main():
                     # Crear archivo Excel en memoria
                     output = BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        # Preparar datos para Excel (incluir rendimiento acumulado)
+                        excel_df = returns_df.copy()
+                        if 'Rendimiento_Diario' in excel_df.columns:
+                            excel_df['Rendimiento_Acumulado'] = (1 + excel_df['Rendimiento_Diario']).cumprod() - 1
+                        
                         # Hoja con datos de rendimientos (sin formatear para mantener valores numéricos)
-                        returns_df.to_excel(writer, sheet_name='Datos_Rendimientos', index=False)
+                        excel_df.to_excel(writer, sheet_name='Datos_Rendimientos', index=False)
                         
                         # Hoja con estadísticas resumidas
                         stats_data = {
