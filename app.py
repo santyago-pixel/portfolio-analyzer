@@ -567,13 +567,24 @@ def main():
                         sales = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
                         invested_amount = purchases - sales
                         
+                        # Calcular dividendos, cupones y amortizaciones en el período
+                        dividendos_cupones = period_asset_ops[
+                            period_asset_ops['Tipo'].str.strip().str.lower().str.contains('cupon|dividendo|coupon|dividend|interes|interest', na=False)
+                        ]['Monto'].sum()
+                        
+                        amortizaciones = period_asset_ops[
+                            period_asset_ops['Tipo'].str.strip().str.lower().str.contains('amortización|amortizacion|amortization', na=False)
+                        ]['Monto'].sum()
+                        
+                        total_cobros = dividendos_cupones + amortizaciones
+                        
                         assets_table_data.append({
                             'Activo': asset,
                             'Nominales': final_nominals,
                             'Precio': current_price,
                             'Monto': final_nominals * current_price,
                             'Invertido': invested_amount,
-                            'Dividendos Cupones Amortizaciones': '',  # Dejar en blanco por ahora
+                            'Dividendos Cupones Amortizaciones': total_cobros,
                             'Ganancia Neta': '',  # Dejar en blanco por ahora
                             '%': ''  # Dejar en blanco por ahora
                         })
@@ -587,6 +598,7 @@ def main():
                     display_assets_df['Precio'] = display_assets_df['Precio'].apply(lambda x: f"${x:,.2f}")
                     display_assets_df['Monto'] = display_assets_df['Monto'].apply(lambda x: f"${x:,.0f}")
                     display_assets_df['Invertido'] = display_assets_df['Invertido'].apply(lambda x: f"${x:,.0f}")
+                    display_assets_df['Dividendos Cupones Amortizaciones'] = display_assets_df['Dividendos Cupones Amortizaciones'].apply(lambda x: f"${x:,.0f}" if x != '' else '')
                     
                     st.dataframe(display_assets_df, use_container_width=True)
                 else:
