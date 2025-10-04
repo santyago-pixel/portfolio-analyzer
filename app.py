@@ -570,19 +570,22 @@ def main():
                         # Encontrar la última fecha en que el saldo de nominales pasa de cero a positivo durante el período
                         entry_date = None
                         running_nominals = 0
+                        previous_nominals = 0
                         
                         # Obtener todas las operaciones del activo ordenadas por fecha
                         all_asset_ops = operaciones[operaciones['Activo'] == asset].sort_values('Fecha')
                         
                         for _, op in all_asset_ops.iterrows():
+                            previous_nominals = running_nominals
+                            
                             if str(op['Tipo']).strip() == 'Compra':
                                 running_nominals += op['Cantidad']
                             elif str(op['Tipo']).strip() == 'Venta':
                                 running_nominals -= op['Cantidad']
                             
-                            # Si estamos en el período y el saldo pasa de 0 a positivo, guardar la fecha
+                            # Si estamos en el período y el saldo pasa de 0 o negativo a positivo, guardar la fecha
                             if (pd.to_datetime(start_date) <= op['Fecha'] <= pd.to_datetime(end_date) and 
-                                running_nominals > 0 and entry_date is None):
+                                previous_nominals <= 0 and running_nominals > 0):
                                 entry_date = op['Fecha']
                         
                         # Si no se encontró entrada en el período, usar la fecha de inicio del período
