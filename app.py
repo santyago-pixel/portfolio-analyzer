@@ -565,35 +565,7 @@ def main():
                         period_asset_ops = period_operations[period_operations['Activo'] == asset]
                         purchases = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
                         sales = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
-                        # Calcular valor de posiciones al inicio del período
-                        initial_nominals = 0
-                        initial_invested = 0
-                        
-                        # Obtener todas las operaciones del activo hasta el inicio del período
-                        asset_ops_until_start = operaciones[
-                            (operaciones["Activo"] == asset) & 
-                            (operaciones["Fecha"] <= pd.to_datetime(start_date))
-                        ]
-                        
-                        for _, op in asset_ops_until_start.iterrows():
-                            if str(op["Tipo"]).strip() == "Compra":
-                                initial_nominals += op["Cantidad"]
-                                initial_invested += op["Monto"]
-                            elif str(op["Tipo"]).strip() == "Venta":
-                                initial_nominals -= op["Cantidad"]
-                                initial_invested -= op["Monto"]
-                        
-                        # Si hay nominales al inicio, calcular el valor invertido proporcional
-                        if initial_nominals > 0:
-                            # Calcular precio promedio de compra al inicio
-                            initial_avg_price = initial_invested / initial_nominals if initial_nominals > 0 else 0
-                            # El monto invertido al inicio es proporcional a los nominales que quedan al final
-                            initial_invested_proportional = (initial_nominals * initial_avg_price) if initial_nominals > 0 else 0
-                        else:
-                            initial_invested_proportional = 0
-                        
-                        # Monto total invertido = valor al inicio + compras - ventas en el período
-                        invested_amount = initial_invested_proportional + purchases - sales
+                        invested_amount = purchases - sales
                         
                         # Calcular dividendos, cupones y amortizaciones en el período
                         dividendos_cupones = period_asset_ops[
@@ -606,14 +578,18 @@ def main():
                         
                         total_cobros = dividendos_cupones + amortizaciones
                         
+                        # Calcular ganancia neta: Monto - Invertido + Dividendos Cupones Amortizaciones
+                        monto_actual = final_nominals * current_price
+                        ganancia_neta = monto_actual - invested_amount + total_cobros
+                        
                         assets_table_data.append({
                             'Activo': asset,
                             'Nominales': final_nominals,
                             'Precio': current_price,
-                            'Monto': final_nominals * current_price,
+                            'Monto': monto_actual,
                             'Invertido': invested_amount,
                             'Dividendos Cupones Amortizaciones': total_cobros,
-                            'Ganancia Neta': '',  # Dejar en blanco por ahora
+                            'Ganancia Neta': ganancia_neta,
                             '%': ''  # Dejar en blanco por ahora
                         })
                 
@@ -627,6 +603,7 @@ def main():
                     display_assets_df['Monto'] = display_assets_df['Monto'].apply(lambda x: f"${x:,.0f}")
                     display_assets_df['Invertido'] = display_assets_df['Invertido'].apply(lambda x: f"${x:,.0f}")
                     display_assets_df['Dividendos Cupones Amortizaciones'] = display_assets_df['Dividendos Cupones Amortizaciones'].apply(lambda x: f"${x:,.0f}" if x != '' else '')
+                    display_assets_df['Ganancia Neta'] = display_assets_df['Ganancia Neta'].apply(lambda x: f"${x:,.0f}" if x != '' else '')
                     
                     st.dataframe(display_assets_df, use_container_width=True)
                 else:
