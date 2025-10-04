@@ -480,7 +480,7 @@ def main():
                     
                     st.markdown(f"""
                     <div class="metric-card">
-                        <div class="metric-label">Amortizaciones del período</div>
+                        <div class="metric-label">Amortizaciones</div>
                         <div class="metric-value">
                             ${amortizaciones:,.0f}
                         </div>
@@ -515,7 +515,7 @@ def main():
                     
                     st.markdown(f"""
                     <div class="metric-card">
-                        <div class="metric-label">Cupones y Dividendos del período</div>
+                        <div class="metric-label">Cupones y Dividendos</div>
                         <div class="metric-value">
                             ${cupones_dividendos:,.0f}
                         </div>
