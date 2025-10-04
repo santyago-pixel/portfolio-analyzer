@@ -600,11 +600,19 @@ class PortfolioCalculator:
             if asset_prices.empty:
                 continue
             
+            # Filtrar precios desde la fecha inicial del sidebar si está definida
+            if self.start_date is not None:
+                asset_prices = asset_prices[asset_prices['Fecha'] >= self.start_date]
+            
+            if asset_prices.empty:
+                continue
+            
             # Calcular rendimientos diarios del activo excluyendo flujos de cash
             returns = []
             dates = []
             previous_value = None
             initial_value = None
+            is_first_date = True
             
             for _, row in asset_prices.iterrows():
                 current_date = row['Fecha']
@@ -630,10 +638,12 @@ class PortfolioCalculator:
                 daily_amortizations = daily_ops[daily_ops['Tipo'].str.strip().str.lower().str.contains('|'.join(['amortización', 'amortizacion', 'amortization']), na=False)]['Monto'].sum()
                 daily_cash_flow = daily_purchases - daily_sales - daily_coupons - daily_amortizations
                 
-                if previous_value is None and current_value > 0:
+                if is_first_date:
+                    # En la primera fecha (fecha inicial del sidebar), el rendimiento es 0
                     initial_value = current_value
                     daily_return = 0.0
                     previous_value = current_value
+                    is_first_date = False
                 elif previous_value is None or previous_value == 0:
                     daily_return = 0.0
                     if current_value > 0:
