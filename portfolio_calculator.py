@@ -86,6 +86,12 @@ class PortfolioCalculator:
             if min_date > max_date:
                 max_date = min_date
         
+        # Usar el rango de fechas más amplio posible
+        # Si hay operaciones más recientes que precios, incluir esas fechas también
+        if not self.operaciones.empty:
+            max_ops_date = self.operaciones['Fecha'].max()
+            max_date = max(max_date, max_ops_date)
+        
         self.date_range = pd.date_range(
             start=min_date,
             end=max_date,
@@ -290,8 +296,11 @@ class PortfolioCalculator:
             'Value_Without_Cash_Flow': values_without_cash_flow
         })
         
-        # Filtrar valores válidos (donde hay activos en cartera)
-        returns_df = returns_df[returns_df['Valor_Cartera'] > 0].copy()
+        # Filtrar valores válidos (donde hay activos en cartera o hay operaciones)
+        # Mantener días con activos en cartera O días con operaciones
+        has_assets = returns_df['Valor_Cartera'] > 0
+        has_operations = returns_df['Daily_Cash_Flow'] != 0
+        returns_df = returns_df[has_assets | has_operations].copy()
         
         # Agregar valor inicial para referencia (usar el primer valor válido si initial_value es None)
         if initial_value is None and not returns_df.empty:
@@ -309,6 +318,23 @@ class PortfolioCalculator:
         
         returns = self.daily_returns['Rendimiento_Diario']
         
+        # Validar que hay datos válidos
+        if len(returns) == 0 or returns.isna().all():
+            return {
+                'total_return': 0,
+                'annualized_return': 0,
+                'volatility': 0,
+                'sharpe_ratio': 0,
+                'sortino_ratio': 0,
+                'calmar_ratio': 0,
+                'max_drawdown': 0,
+                'win_rate': 0,
+                'var_95': 0,
+                'cvar_95': 0,
+                'total_days': 0,
+                'positive_days': 0
+            }
+        
         # Calcular rendimiento total usando el producto acumulado de rendimientos diarios
         # Esta es la fórmula correcta que incluye automáticamente cupones y dividendos
         total_return = (1 + returns).prod() - 1
@@ -316,8 +342,8 @@ class PortfolioCalculator:
         days = len(returns)
         annualized_return = (1 + total_return) ** (252 / days) - 1 if days > 0 else 0
         
-        # Volatilidad
-        volatility = returns.std() * np.sqrt(252)
+        # Volatilidad - con validación para NaN
+        volatility = returns.std() * np.sqrt(252) if not returns.isna().all() else 0
         
         # Sharpe ratio
         excess_return = annualized_return - risk_free_rate
@@ -341,11 +367,14 @@ class PortfolioCalculator:
         downside_volatility = negative_returns.std() * np.sqrt(252) if len(negative_returns) > 0 else 0
         sortino_ratio = excess_return / downside_volatility if downside_volatility > 0 else 0
         
-        # VaR (Value at Risk) 95%
-        var_95 = np.percentile(returns, 5)
-        
-        # CVaR (Conditional Value at Risk) 95%
-        cvar_95 = returns[returns <= var_95].mean()
+        # VaR (Value at Risk) 95% - con validación
+        if len(returns) > 0 and not returns.isna().all():
+            var_95 = np.percentile(returns.dropna(), 5)
+            # CVaR (Conditional Value at Risk) 95%
+            cvar_95 = returns[returns <= var_95].mean()
+        else:
+            var_95 = 0
+            cvar_95 = 0
         
         self.metrics = {
             'total_return': total_return,
@@ -424,7 +453,15 @@ class PortfolioCalculator:
         
         for asset in assets:
             # Obtener operaciones del activo
-            asset_ops = self.operaciones[self.operaciones['Activo'] == asset]
+            if self.start_date is not None:
+                # Filtrar operaciones del período cuando se proporciona start_date
+                asset_ops = self.operaciones[
+                    (self.operaciones['Activo'] == asset) & 
+                    (self.operaciones['Fecha'] >= self.start_date)
+                ]
+            else:
+                # Usar todas las operaciones si no hay filtro de fecha
+                asset_ops = self.operaciones[self.operaciones['Activo'] == asset]
             
             # Usar la misma lógica que calculate_positions_summary para consistencia
             total_invested = 0  # Inversión total original (solo compras)
@@ -520,6 +557,16 @@ class PortfolioCalculator:
                     'Amortizaciones': amortizations,
                     'Inversion_Total': total_invested
                 })
+        
+        # Validar que hay datos de atribución
+        if not attribution_data:
+            # Retornar DataFrame vacío con las columnas esperadas
+            return pd.DataFrame(columns=[
+                'Activo', 'Peso', 'Retorno_vs_Costo', 'Retorno_Total', 'Contribucion',
+                'Valor_Actual', 'Precio_Promedio', 'Precio_Actual', 'Cantidad',
+                'Ganancias_Realizadas', 'Ganancias_No_Realizadas', 
+                'Ingresos_Cupones_Dividendos', 'Amortizaciones', 'Inversion_Total'
+            ])
         
         # Calcular inversión total de la cartera
         df = pd.DataFrame(attribution_data)
@@ -633,7 +680,15 @@ class PortfolioCalculator:
             
             if not asset_prices.empty:
                 # Calcular precio promedio de compra y rendimiento real del activo
-                asset_ops = self.operaciones[self.operaciones['Activo'] == asset].sort_values('Fecha')
+                if self.start_date is not None:
+                    # Filtrar operaciones del período cuando se proporciona start_date
+                    asset_ops = self.operaciones[
+                        (self.operaciones['Activo'] == asset) & 
+                        (self.operaciones['Fecha'] >= self.start_date)
+                    ].sort_values('Fecha')
+                else:
+                    # Usar todas las operaciones si no hay filtro de fecha
+                    asset_ops = self.operaciones[self.operaciones['Activo'] == asset].sort_values('Fecha')
                 
                 # Variables para tracking de posición
                 total_invested = 0
