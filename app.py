@@ -436,15 +436,29 @@ def main():
                     """, unsafe_allow_html=True)
                 
                 with col2:
+                    # Calcular amortizaciones del período usando datos ya filtrados
+                    amortizaciones = 0
+                    if 'Amortizaciones_Diarias' in returns_df.columns:
+                        # Usar datos ya filtrados por el período (misma lógica que Rendimiento Total)
+                        amortizaciones = returns_df['Amortizaciones_Diarias'].sum()
+                    elif operaciones is not None:
+                        # Fallback: filtrar operaciones por período seleccionado
+                        ops_periodo = operaciones[
+                            (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
+                            (operaciones['Fecha'] <= pd.to_datetime(end_date))
+                        ]
+                        # Filtrar operaciones de amortizaciones
+                        amortizacion_mask = ops_periodo['Tipo'].str.strip().str.lower().str.contains('amortización|amortizacion|amortization', na=False)
+                        amortizaciones = ops_periodo[amortizacion_mask]['Monto'].sum()
+                    
                     st.markdown(f"""
                     <div class="metric-card">
-                        <div class="metric-label">Rendimiento Anualizado</div>
+                        <div class="metric-label">Amortizaciones del período</div>
                         <div class="metric-value">
-                            {metrics['annualized_return']:.2%}
+                            ${amortizaciones:,.0f}
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
-                
+                    """, unsafe_allow_html=True)                
                 with col3:
                     st.markdown(f"""
                     <div class="metric-card">
