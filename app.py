@@ -320,6 +320,8 @@ def create_returns_distribution(returns_df):
 
 def main():
     st.markdown("---")
+    # Cargar datos primero (usando archivo por defecto para el sidebar)
+    operaciones, precios = load_data()
     
     # Sidebar con configuración
     with st.sidebar:
@@ -374,8 +376,6 @@ def main():
         else:
             st.info("📁 Usando archivo por defecto: operaciones.xlsx")
         
-    # Cargar datos (usando archivo subido si está disponible, sino el por defecto)
-    operaciones, precios = load_data(uploaded_file)
     
     
     if operaciones is not None and precios is not None:
