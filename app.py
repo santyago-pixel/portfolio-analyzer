@@ -320,8 +320,14 @@ def create_returns_distribution(returns_df):
 
 def main():
     st.markdown("---")
+    
     # Cargar datos primero (usando archivo por defecto para el sidebar)
     operaciones, precios = load_data()
+    
+    # Validar que los datos se cargaron correctamente
+    if operaciones is None or precios is None:
+        st.error("Error al cargar los datos. Verifica que el archivo Excel tenga las hojas 'Operaciones' y 'Precios'.")
+        return
     
     # Sidebar con configuración
     with st.sidebar:
@@ -329,6 +335,7 @@ def main():
         
         # Período de análisis
         st.subheader("Período de Análisis")
+        
         # Calcular fechas mínimas y máximas disponibles
         min_date = None
         max_date = None
@@ -360,7 +367,8 @@ def main():
             value=default_end,
             min_value=min_date,
             max_value=max_date
-        )        
+        )
+        
         # Carga de archivos
         st.subheader("Carga de Datos")
         uploaded_file = st.file_uploader(
@@ -376,6 +384,9 @@ def main():
         else:
             st.info("📁 Usando archivo por defecto: operaciones.xlsx")
         
+    # Recargar datos si se subió un archivo nuevo
+    if uploaded_file is not None:
+        operaciones, precios = load_data(uploaded_file)
     
     
     if operaciones is not None and precios is not None:
@@ -383,29 +394,33 @@ def main():
         operaciones['Fecha'] = pd.to_datetime(operaciones['Fecha'])
         precios['Fecha'] = pd.to_datetime(precios['Fecha'])
         
-        # Filtrar precios por período seleccionado (solo para visualización)
+        # Filtrar datos por período seleccionado
+        operaciones_filtered = operaciones[
+            (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
+            (operaciones['Fecha'] <= pd.to_datetime(end_date))
+        ]
+        
         precios_filtered = precios[
             (precios['Fecha'] >= pd.to_datetime(start_date)) & 
             (precios['Fecha'] <= pd.to_datetime(end_date))
         ]
         
-        # Filtrar operaciones por período seleccionado (solo para visualización)
-        operaciones_period = operaciones[
-            (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
-            (operaciones['Fecha'] <= pd.to_datetime(end_date))
-        ]
-        
-        # Crear calculador de cartera con TODOS los datos y fecha de inicio
-        calculator = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
+        # Crear calculador de cartera con TODOS los datos para calcular posiciones iniciales correctamente
+        # pero usar datos filtrados para el análisis del período
+        calculator_full = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
         
         # Verificar si hay activos en cartera a la fecha de inicio
-        initial_positions = calculator._get_initial_positions(pd.to_datetime(start_date))
+        initial_positions = calculator_full._get_initial_positions(pd.to_datetime(start_date))
         has_assets_in_portfolio = any(pos['cantidad'] > 0 for pos in initial_positions.values())
         
-        # Verificar si hay datos para mostrar
-        if operaciones_period.empty and not has_assets_in_portfolio:
-            st.warning(f"No hay operaciones ni activos en cartera en el período seleccionado: {start_date.strftime('%Y-%m-%d')} a {end_date.strftime('%Y-%m-%d')}")
+        # Si no hay activos en cartera al inicio del período, mostrar mensaje
+        if not has_assets_in_portfolio:
+            st.warning(f"No hay activos en cartera al inicio del período seleccionado: {start_date.strftime('%Y-%m-%d')}")
             return
+        
+        # Crear calculador con datos completos para calcular métricas de rendimiento
+        # pero usar start_date para limitar el análisis al período seleccionado
+        calculator = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
         
         # Calcular rendimientos diarios
         returns_df = calculator.calculate_daily_returns()
@@ -416,7 +431,7 @@ def main():
             
             if metrics is not None:
                 # Mostrar métricas principales
-                st.header("Métricas de Performance")
+                st.header("Rendimiento de la Cartera")
                 
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -458,7 +473,8 @@ def main():
                             ${amortizaciones:,.0f}
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)                
+                    """, unsafe_allow_html=True)
+                
                 with col3:
                     st.markdown(f"""
                     <div class="metric-card">
@@ -483,7 +499,8 @@ def main():
                         ]
                         # Filtrar operaciones de cupones y dividendos
                         cupon_dividendo_mask = ops_periodo['Tipo'].str.strip().str.lower().str.contains('cupon|dividendo|coupon|dividend', na=False)
-                        cupones_dividendos = ops_periodo[cupon_dividendo_mask]['Monto'].sum()                    
+                        cupones_dividendos = ops_periodo[cupon_dividendo_mask]['Monto'].sum()
+                    
                     st.markdown(f"""
                     <div class="metric-card">
                         <div class="metric-label">Cupones y Dividendos del período</div>
@@ -647,31 +664,47 @@ def main():
             # Performance histórica individual
             individual_performance = calculator.calculate_asset_cumulative_returns()
             if not individual_performance.empty:
-                st.subheader("Evolución de Rendimientos Acumulados")
+                # Filtrar por fechas seleccionadas en el sidebar
+                individual_performance['Fecha'] = pd.to_datetime(individual_performance['Fecha'])
+                individual_performance_filtered = individual_performance[
+                    (individual_performance['Fecha'] >= pd.to_datetime(start_date)) & 
+                    (individual_performance['Fecha'] <= pd.to_datetime(end_date))
+                ]
                 
-                fig_individual = px.line(
-                    individual_performance,
-                    x='Fecha',
-                    y='Rendimiento_Acumulado',
-                    color='Activo',
-                    title="Rendimiento Acumulado por Activo (Sin Flujos de Cash)",
-                    labels={'Rendimiento_Acumulado': 'Rendimiento Acumulado'}
-                )
+                if not individual_performance_filtered.empty:
+                    st.subheader("Evolución de Rendimientos Acumulados")
+                    
+                    fig_individual = px.line(
+                        individual_performance_filtered,
+                        x='Fecha',
+                        y='Rendimiento_Acumulado',
+                        color='Activo',
+                        title="Rendimiento Acumulado por Activo (Sin Flujos de Cash)",
+                        labels={'Rendimiento_Acumulado': 'Rendimiento Acumulado'}
+                    )
                 fig_individual.update_layout(yaxis_tickformat='.1%')
                 st.plotly_chart(fig_individual, use_container_width=True)
             
             # Comparación de precios (usar función original que incluye precios)
             individual_prices = calculator.calculate_individual_asset_performance()
             if not individual_prices.empty:
-                st.subheader("Evolución de Precios")
-                fig_prices = px.line(
-                    individual_prices,
-                    x='Fecha',
-                    y='Precio',
-                    color='Activo',
-                    title="Evolución de Precios por Activo",
-                    labels={'Precio': 'Precio'}
-                )
+                # Filtrar por fechas seleccionadas en el sidebar
+                individual_prices['Fecha'] = pd.to_datetime(individual_prices['Fecha'])
+                individual_prices_filtered = individual_prices[
+                    (individual_prices['Fecha'] >= pd.to_datetime(start_date)) & 
+                    (individual_prices['Fecha'] <= pd.to_datetime(end_date))
+                ]
+                
+                if not individual_prices_filtered.empty:
+                    st.subheader("Evolución de Precios")
+                    fig_prices = px.line(
+                        individual_prices_filtered,
+                        x='Fecha',
+                        y='Precio',
+                        color='Activo',
+                        title="Evolución de Precios por Activo",
+                        labels={'Precio': 'Precio'}
+                    )
                 st.plotly_chart(fig_prices, use_container_width=True)
             
             
@@ -693,19 +726,19 @@ def main():
                 display_df['Dividendos_Diarios'] = 0.0
                 
                 # Calcular cupones, amortizaciones y dividendos por día
-                if operaciones is not None:
+                if operaciones_filtered is not None:
                     for idx, row in display_df.iterrows():
                         fecha = pd.to_datetime(row['Fecha'])
                         
                         # Filtrar operaciones del día
-                        ops_dia = operaciones[pd.to_datetime(operaciones['Fecha']).dt.date == fecha.date()]
+                        ops_dia = operaciones_filtered[pd.to_datetime(operaciones_filtered['Fecha']).dt.date == fecha.date()]
                         
                         # Cupones
                         cupones_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('cupon|coupon', na=False)
                         display_df.loc[idx, 'Cupones_Diarios'] = ops_dia[cupones_mask]['Monto'].sum()
                         
                         # Amortizaciones
-                        amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortización|amortizacion|amortization', na=False)
+                        amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortizacion|amortization', na=False)
                         display_df.loc[idx, 'Amortizaciones_Diarias'] = ops_dia[amort_mask]['Monto'].sum()
                         
                         # Dividendos
@@ -713,8 +746,8 @@ def main():
                         display_df.loc[idx, 'Dividendos_Diarios'] = ops_dia[div_mask]['Monto'].sum()
                 
                 # Reordenar columnas: mantener todas las columnas originales y agregar las nuevas
-                column_order = ['Fecha', 'Rendimiento_Diario', 'Valor_Cartera', 'Daily_Cash_Flow', 
-                               'Value_Without_Cash_Flow', 'Valor_Inicial', 'Rendimiento_Acumulado',
+                column_order = ['Fecha', 'Rendimiento_Diario', 'Rendimiento_Acumulado', 'Valor_Cartera', 'Daily_Cash_Flow', 
+                               'Value_Without_Cash_Flow', 'Valor_Inicial',
                                'Cupones_Diarios', 'Amortizaciones_Diarias', 'Dividendos_Diarios']
                 
                 # Solo incluir columnas que existen
@@ -755,19 +788,19 @@ def main():
                     excel_df['Dividendos_Diarios'] = 0.0
                     
                     # Calcular cupones, amortizaciones y dividendos por día
-                    if operaciones is not None:
+                    if operaciones_filtered is not None:
                         for idx, row in excel_df.iterrows():
                             fecha = pd.to_datetime(row['Fecha'])
                             
                             # Filtrar operaciones del día
-                            ops_dia = operaciones[pd.to_datetime(operaciones['Fecha']).dt.date == fecha.date()]
+                            ops_dia = operaciones_filtered[pd.to_datetime(operaciones_filtered['Fecha']).dt.date == fecha.date()]
                             
                             # Cupones
                             cupones_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('cupon|coupon', na=False)
                             excel_df.loc[idx, 'Cupones_Diarios'] = ops_dia[cupones_mask]['Monto'].sum()
                             
                             # Amortizaciones
-                            amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortización|amortizacion|amortization', na=False)
+                            amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortizacion|amortization', na=False)
                             excel_df.loc[idx, 'Amortizaciones_Diarias'] = ops_dia[amort_mask]['Monto'].sum()
                             
                             # Dividendos
@@ -775,8 +808,8 @@ def main():
                             excel_df.loc[idx, 'Dividendos_Diarios'] = ops_dia[div_mask]['Monto'].sum()
                     
                     # Reordenar columnas para Excel
-                    column_order = ['Fecha', 'Rendimiento_Diario', 'Valor_Cartera', 'Daily_Cash_Flow', 
-                                   'Value_Without_Cash_Flow', 'Valor_Inicial', 'Rendimiento_Acumulado',
+                    column_order = ['Fecha', 'Rendimiento_Diario', 'Rendimiento_Acumulado', 'Valor_Cartera', 'Daily_Cash_Flow', 
+                                   'Value_Without_Cash_Flow', 'Valor_Inicial',
                                    'Cupones_Diarios', 'Amortizaciones_Diarias', 'Dividendos_Diarios']
                     available_columns = [col for col in column_order if col in excel_df.columns]
                     excel_df = excel_df[available_columns]
