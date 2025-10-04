@@ -30,7 +30,7 @@ st.markdown("""
         padding-top: 1rem;
     }
     .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #708090;
         padding: 1rem;
         border-radius: 10px;
         color: white;
@@ -315,7 +315,6 @@ def create_returns_distribution(returns_df):
     return fig
 
 def main():
-    st.title("Portfolio Analyzer")
     st.markdown("---")
     
     # Sidebar con configuración
@@ -434,9 +433,6 @@ def main():
                     """, unsafe_allow_html=True)
                 
             
-            # Análisis Visual
-            st.header("Análisis Visual")
-            
             # Gráfico de evolución del valor de la cartera con rendimiento acumulado
             fig_cumulative = go.Figure()
             
@@ -501,9 +497,6 @@ def main():
             fig_daily.update_layout(template="plotly_white")
             st.plotly_chart(fig_daily, use_container_width=True)
             
-            # Análisis de Atribución
-            st.header("Análisis de Atribución")
-            
             
             # Calcular análisis de atribución
             attribution = calculator.calculate_attribution_analysis()
@@ -519,8 +512,8 @@ def main():
                 fig_attribution.update_layout(template="plotly_white")
                 st.plotly_chart(fig_attribution, use_container_width=True)
                 
-                # Tabla de atribución
-                st.subheader("Contribución por Activo")
+                # Tabla de atribución (oculta visualmente pero mantiene datos)
+                # st.subheader("Contribución por Activo")
                 
                 # Formatear columnas
                 attribution_display = attribution.copy()
@@ -541,10 +534,8 @@ def main():
                 if 'Cantidad' in attribution_display.columns:
                     attribution_display['Cantidad'] = attribution_display['Cantidad'].apply(lambda x: f"{x:,.0f}")
                 
-                st.dataframe(attribution_display, use_container_width=True)
+                # st.dataframe(attribution_display, use_container_width=True)
             
-            # Rendimiento Individual de Activos
-            st.header("Rendimiento Individual por Activo")
             
             # Estadísticas resumidas por activo (usando análisis de atribución corregido)
             asset_stats = calculator.calculate_attribution_analysis()
@@ -663,40 +654,39 @@ def main():
                 st.dataframe(display_df, use_container_width=True)
                 
                 # Botón de descarga en Excel
-                if st.button("📥 Descargar Datos de Rendimientos (Excel)", key="download_returns_excel"):
-                    # Crear archivo Excel en memoria
-                    output = BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        # Preparar datos para Excel (incluir rendimiento acumulado)
-                        excel_df = returns_df.copy()
-                        if 'Rendimiento_Diario' in excel_df.columns:
-                            excel_df['Rendimiento_Acumulado'] = (1 + excel_df['Rendimiento_Diario']).cumprod() - 1
-                        
-                        # Hoja con datos de rendimientos (sin formatear para mantener valores numéricos)
-                        excel_df.to_excel(writer, sheet_name='Datos_Rendimientos', index=False)
-                        
-                        # Hoja con estadísticas resumidas
-                        stats_data = {
-                            'Métrica': ['Rendimiento Promedio Diario', 'Volatilidad Diaria', 'Rendimiento Total'],
-                            'Valor': [
-                                f"{returns_df['Rendimiento_Diario'].mean():.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A",
-                                f"{returns_df['Rendimiento_Diario'].std():.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A",
-                                f"{(1 + returns_df['Rendimiento_Diario']).prod() - 1:.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A"
-                            ]
-                        }
-                        stats_df = pd.DataFrame(stats_data)
-                        stats_df.to_excel(writer, sheet_name='Estadisticas', index=False)
+                # Crear archivo Excel en memoria
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    # Preparar datos para Excel (incluir rendimiento acumulado)
+                    excel_df = returns_df.copy()
+                    if 'Rendimiento_Diario' in excel_df.columns:
+                        excel_df['Rendimiento_Acumulado'] = (1 + excel_df['Rendimiento_Diario']).cumprod() - 1
                     
-                    output.seek(0)
+                    # Hoja con datos de rendimientos (sin formatear para mantener valores numéricos)
+                    excel_df.to_excel(writer, sheet_name='Datos_Rendimientos', index=False)
                     
-                    # Descargar archivo
-                    st.download_button(
-                        label="💾 Descargar archivo Excel",
-                        data=output.getvalue(),
-                        file_name=f"datos_rendimientos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        key="download_excel_file"
-                    )
+                    # Hoja con estadísticas resumidas
+                    stats_data = {
+                        'Métrica': ['Rendimiento Promedio Diario', 'Volatilidad Diaria', 'Rendimiento Total'],
+                        'Valor': [
+                            f"{returns_df['Rendimiento_Diario'].mean():.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A",
+                            f"{returns_df['Rendimiento_Diario'].std():.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A",
+                            f"{(1 + returns_df['Rendimiento_Diario']).prod() - 1:.2%}" if 'Rendimiento_Diario' in returns_df.columns else "N/A"
+                        ]
+                    }
+                    stats_df = pd.DataFrame(stats_data)
+                    stats_df.to_excel(writer, sheet_name='Estadisticas', index=False)
+                
+                output.seek(0)
+                
+                # Descargar archivo directamente
+                st.download_button(
+                    label="📥 Descargar Datos de Rendimientos (Excel)",
+                    data=output.getvalue(),
+                    file_name=f"datos_rendimientos_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    key="download_excel_file"
+                )
             else:
                 st.warning("No hay datos de rendimientos disponibles.")
     
