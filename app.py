@@ -636,6 +636,41 @@ def main():
                 if 'Rendimiento_Diario' in display_df.columns:
                     display_df['Rendimiento_Acumulado'] = (1 + display_df['Rendimiento_Diario']).cumprod() - 1
                 
+                # Agregar columnas de cupones, amortizaciones y dividendos por día
+                # Inicializar con ceros
+                display_df['Cupones_Diarios'] = 0.0
+                display_df['Amortizaciones_Diarias'] = 0.0
+                display_df['Dividendos_Diarios'] = 0.0
+                
+                # Calcular cupones, amortizaciones y dividendos por día
+                if operaciones is not None:
+                    for idx, row in display_df.iterrows():
+                        fecha = pd.to_datetime(row['Fecha'])
+                        
+                        # Filtrar operaciones del día
+                        ops_dia = operaciones[pd.to_datetime(operaciones['Fecha']).dt.date == fecha.date()]
+                        
+                        # Cupones
+                        cupones_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('cupon|coupon', na=False)
+                        display_df.loc[idx, 'Cupones_Diarios'] = ops_dia[cupones_mask]['Monto'].sum()
+                        
+                        # Amortizaciones
+                        amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortizacion|amortization', na=False)
+                        display_df.loc[idx, 'Amortizaciones_Diarias'] = ops_dia[amort_mask]['Monto'].sum()
+                        
+                        # Dividendos
+                        div_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('dividendo|dividend', na=False)
+                        display_df.loc[idx, 'Dividendos_Diarios'] = ops_dia[div_mask]['Monto'].sum()
+                
+                # Reordenar columnas: mantener todas las columnas originales y agregar las nuevas
+                column_order = ['Fecha', 'Rendimiento_Diario', 'Valor_Cartera', 'Daily_Cash_Flow', 
+                               'Value_Without_Cash_Flow', 'Valor_Inicial', 'Rendimiento_Acumulado',
+                               'Cupones_Diarios', 'Amortizaciones_Diarias', 'Dividendos_Diarios']
+                
+                # Solo incluir columnas que existen
+                available_columns = [col for col in column_order if col in display_df.columns]
+                display_df = display_df[available_columns]
+                
                 # Formatear fechas
                 if 'Fecha' in display_df.columns:
                     display_df['Fecha'] = pd.to_datetime(display_df['Fecha']).dt.strftime('%Y-%m-%d')
@@ -647,7 +682,8 @@ def main():
                         display_df[col] = display_df[col].apply(lambda x: f"{x:.2%}")
                 
                 # Formatear valores monetarios
-                money_cols = ['Valor_Cartera', 'Valor_Inicial', 'Daily_Cash_Flow', 'Value_Without_Cash_Flow']
+                money_cols = ['Valor_Cartera', 'Daily_Cash_Flow', 'Value_Without_Cash_Flow', 'Valor_Inicial', 
+                             'Cupones_Diarios', 'Amortizaciones_Diarias', 'Dividendos_Diarios']
                 for col in money_cols:
                     if col in display_df.columns:
                         display_df[col] = display_df[col].apply(lambda x: f"${x:,.2f}")
@@ -658,10 +694,42 @@ def main():
                 # Crear archivo Excel en memoria
                 output = BytesIO()
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    # Preparar datos para Excel (incluir rendimiento acumulado)
+                    # Preparar datos para Excel (incluir rendimiento acumulado y nuevas columnas)
                     excel_df = returns_df.copy()
                     if 'Rendimiento_Diario' in excel_df.columns:
                         excel_df['Rendimiento_Acumulado'] = (1 + excel_df['Rendimiento_Diario']).cumprod() - 1
+                    
+                    # Agregar columnas de cupones, amortizaciones y dividendos por día
+                    excel_df['Cupones_Diarios'] = 0.0
+                    excel_df['Amortizaciones_Diarias'] = 0.0
+                    excel_df['Dividendos_Diarios'] = 0.0
+                    
+                    # Calcular cupones, amortizaciones y dividendos por día
+                    if operaciones is not None:
+                        for idx, row in excel_df.iterrows():
+                            fecha = pd.to_datetime(row['Fecha'])
+                            
+                            # Filtrar operaciones del día
+                            ops_dia = operaciones[pd.to_datetime(operaciones['Fecha']).dt.date == fecha.date()]
+                            
+                            # Cupones
+                            cupones_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('cupon|coupon', na=False)
+                            excel_df.loc[idx, 'Cupones_Diarios'] = ops_dia[cupones_mask]['Monto'].sum()
+                            
+                            # Amortizaciones
+                            amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortizacion|amortization', na=False)
+                            excel_df.loc[idx, 'Amortizaciones_Diarias'] = ops_dia[amort_mask]['Monto'].sum()
+                            
+                            # Dividendos
+                            div_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('dividendo|dividend', na=False)
+                            excel_df.loc[idx, 'Dividendos_Diarios'] = ops_dia[div_mask]['Monto'].sum()
+                    
+                    # Reordenar columnas para Excel
+                    column_order = ['Fecha', 'Rendimiento_Diario', 'Valor_Cartera', 'Daily_Cash_Flow', 
+                                   'Value_Without_Cash_Flow', 'Valor_Inicial', 'Rendimiento_Acumulado',
+                                   'Cupones_Diarios', 'Amortizaciones_Diarias', 'Dividendos_Diarios']
+                    available_columns = [col for col in column_order if col in excel_df.columns]
+                    excel_df = excel_df[available_columns]
                     
                     # Hoja con datos de rendimientos (sin formatear para mantener valores numéricos)
                     excel_df.to_excel(writer, sheet_name='Datos_Rendimientos', index=False)
