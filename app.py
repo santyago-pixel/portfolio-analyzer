@@ -327,9 +327,38 @@ def main():
         
         # Período de análisis
         st.subheader("Período de Análisis")
-        start_date = st.date_input("Fecha de Inicio", value=datetime.now() - timedelta(days=365))
-        end_date = st.date_input("Fecha de Fin", value=datetime.now())
+        # Calcular fechas mínimas y máximas disponibles
+        min_date = None
+        max_date = None
+        if operaciones is not None and precios is not None:
+            # Usar copias para no modificar los datos originales
+            ops_copy = operaciones.copy()
+            precios_copy = precios.copy()
+            ops_copy['Fecha'] = pd.to_datetime(ops_copy['Fecha'])
+            precios_copy['Fecha'] = pd.to_datetime(precios_copy['Fecha'])
+            
+            # Fecha mínima: primera fecha de operaciones
+            min_date = ops_copy['Fecha'].min().date()
+            
+            # Fecha máxima: última fecha de precios
+            max_date = precios_copy['Fecha'].max().date()
         
+        # Usar fechas disponibles o valores por defecto
+        default_start = min_date if min_date else datetime.now() - timedelta(days=365)
+        default_end = max_date if max_date else datetime.now()
+        
+        start_date = st.date_input(
+            "Fecha de Inicio", 
+            value=default_start,
+            min_value=min_date,
+            max_value=max_date
+        )
+        end_date = st.date_input(
+            "Fecha de Fin", 
+            value=default_end,
+            min_value=min_date,
+            max_value=max_date
+        )        
         # Carga de archivos
         st.subheader("Carga de Datos")
         uploaded_file = st.file_uploader(
