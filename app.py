@@ -56,26 +56,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-def load_data():
+def load_data(uploaded_file=None):
     """Cargar datos de operaciones y precios"""
-    # Intentar cargar automáticamente el archivo operaciones.xlsx
-    default_file = "operaciones.xlsx"
-    if os.path.exists(default_file):
-        uploaded_file = default_file
-    else:
-        uploaded_file = st.file_uploader(
-            "Selecciona tu archivo Excel",
-            type=['xlsx', 'xls'],
-            help="El archivo debe contener dos hojas: 'Operaciones' y 'Precios'"
-        )
-    
-    
-    # Buscar archivo Excel automáticamente
-    excel_files = [f for f in os.listdir('.') if f.endswith('.xlsx')]
-    if not uploaded_file and excel_files:
-        # Si hay archivos Excel en el directorio, usar el primero
-        excel_file = excel_files[0]
-        uploaded_file = open(excel_file, 'rb')
+    # Si no se proporciona un archivo, intentar cargar automáticamente el archivo operaciones.xlsx
+    if uploaded_file is None:
+        default_file = "operaciones.xlsx"
+        if os.path.exists(default_file):
+            uploaded_file = default_file
+        else:
+            # Buscar archivo Excel automáticamente
+            excel_files = [f for f in os.listdir('.') if f.endswith('.xlsx')]
+            if excel_files:
+                # Si hay archivos Excel en el directorio, usar el primero
+                excel_file = excel_files[0]
+                uploaded_file = open(excel_file, 'rb')
     
     if uploaded_file is not None:
         try:
@@ -322,19 +316,35 @@ def main():
     st.title("Portfolio Analyzer")
     st.markdown("---")
     
-    # Cargar datos automáticamente
-    operaciones, precios = load_data()
-    
     # Sidebar con configuración
     with st.sidebar:
         st.header("Configuración")
+        
+        # Carga de archivos
+        st.subheader("Carga de Datos")
+        uploaded_file = st.file_uploader(
+            "Cargar archivo Excel",
+            type=['xlsx', 'xls'],
+            help="El archivo debe contener dos hojas: 'Operaciones' y 'Precios'",
+            key="excel_uploader"
+        )
+        
+        # Mostrar qué archivo se está usando
+        if uploaded_file is not None:
+            st.success(f"📁 Archivo cargado: {uploaded_file.name}")
+        else:
+            st.info("📁 Usando archivo por defecto: operaciones.xlsx")
         
         # Período de análisis
         st.subheader("Período de Análisis")
         start_date = st.date_input("Fecha de Inicio", value=datetime.now() - timedelta(days=365))
         end_date = st.date_input("Fecha de Fin", value=datetime.now())
         
-        # Mostrar información del período filtrado en el sidebar
+    # Cargar datos (usando archivo subido si está disponible, sino el por defecto)
+    operaciones, precios = load_data(uploaded_file)
+    
+    # Mostrar información del período filtrado en el sidebar
+    with st.sidebar:
         if operaciones is not None and precios is not None:
             # Filtrar operaciones por período seleccionado
             operaciones_period = operaciones[
