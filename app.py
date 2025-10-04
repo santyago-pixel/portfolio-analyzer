@@ -522,6 +522,75 @@ def main():
                     </div>
                     """, unsafe_allow_html=True)
                 
+                # Tabla de activos del período
+                st.subheader("Activos del Período")
+                
+                # Crear tabla con activos que tuvieron nominales positivos durante el período
+                assets_table_data = []
+                
+                # Obtener todos los activos únicos del período
+                period_operations = operaciones[
+                    (operaciones['Fecha'] >= pd.to_datetime(start_date)) & 
+                    (operaciones['Fecha'] <= pd.to_datetime(end_date))
+                ]
+                
+                # Obtener activos que tuvieron operaciones en el período
+                period_assets = period_operations['Activo'].unique()
+                period_assets = [asset for asset in period_assets if pd.notna(asset)]
+                
+                for asset in period_assets:
+                    # Calcular nominales al final del período
+                    final_nominals = 0
+                    
+                    # Obtener todas las operaciones del activo hasta el final del período
+                    asset_ops = operaciones[operaciones['Activo'] == asset]
+                    asset_ops_until_end = asset_ops[asset_ops['Fecha'] <= pd.to_datetime(end_date)]
+                    
+                    for _, op in asset_ops_until_end.iterrows():
+                        if str(op['Tipo']).strip() == 'Compra':
+                            final_nominals += op['Cantidad']
+                        elif str(op['Tipo']).strip() == 'Venta':
+                            final_nominals -= op['Cantidad']
+                    
+                    # Solo incluir activos con nominales positivos al final del período
+                    if final_nominals > 0:
+                        # Obtener precio actual del activo
+                        asset_prices = precios[
+                            (precios['Activo'] == asset) & 
+                            (precios['Fecha'] <= pd.to_datetime(end_date))
+                        ]
+                        current_price = asset_prices.iloc[-1]['Precio'] if not asset_prices.empty else 0
+                        
+                        # Calcular monto invertido (compras - ventas) en el período
+                        period_asset_ops = period_operations[period_operations['Activo'] == asset]
+                        purchases = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Compra']['Monto'].sum()
+                        sales = period_asset_ops[period_asset_ops['Tipo'].str.strip() == 'Venta']['Monto'].sum()
+                        invested_amount = purchases - sales
+                        
+                        assets_table_data.append({
+                            'Activo': asset,
+                            'Nominales': final_nominals,
+                            'Precio': current_price,
+                            'Monto': final_nominals * current_price,
+                            'Invertido': invested_amount,
+                            'Dividendos Cupones Amortizaciones': '',  # Dejar en blanco por ahora
+                            'Ganancia Neta': '',  # Dejar en blanco por ahora
+                            '%': ''  # Dejar en blanco por ahora
+                        })
+                
+                # Crear DataFrame y mostrar tabla
+                if assets_table_data:
+                    assets_df = pd.DataFrame(assets_table_data)
+                    
+                    # Formatear la tabla para mejor visualización
+                    display_assets_df = assets_df.copy()
+                    display_assets_df['Precio'] = display_assets_df['Precio'].apply(lambda x: f"${x:,.2f}")
+                    display_assets_df['Monto'] = display_assets_df['Monto'].apply(lambda x: f"${x:,.0f}")
+                    display_assets_df['Invertido'] = display_assets_df['Invertido'].apply(lambda x: f"${x:,.0f}")
+                    
+                    st.dataframe(display_assets_df, use_container_width=True)
+                else:
+                    st.info("No hay activos con nominales positivos al final del período seleccionado.")
             
             # Gráfico de evolución del valor de la cartera con rendimiento acumulado
             fig_cumulative = go.Figure()
