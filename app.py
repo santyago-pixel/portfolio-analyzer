@@ -419,8 +419,8 @@ def main():
             return
         
         # Crear calculador con datos completos para calcular métricas de rendimiento
-        # pero usar start_date para limitar el análisis al período seleccionado
-        calculator = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date))
+        # pero usar start_date y end_date para limitar el análisis al período seleccionado
+        calculator = PortfolioCalculator(operaciones, precios, pd.to_datetime(start_date), pd.to_datetime(end_date))
         
         # Calcular rendimientos diarios
         returns_df = calculator.calculate_daily_returns()

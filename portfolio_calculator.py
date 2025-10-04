@@ -10,10 +10,11 @@ from typing import Dict, List, Tuple, Optional
 class PortfolioCalculator:
     """Calculadora avanzada de métricas de cartera"""
     
-    def __init__(self, operaciones: pd.DataFrame, precios: pd.DataFrame, start_date: pd.Timestamp = None):
+    def __init__(self, operaciones: pd.DataFrame, precios: pd.DataFrame, start_date: pd.Timestamp = None, end_date: pd.Timestamp = None):
         self.operaciones = operaciones.copy()
         self.precios = precios.copy()
         self.start_date = start_date
+        self.end_date = end_date
         self.portfolio_data = None
         self.daily_returns = None
         self.metrics = None
@@ -84,6 +85,13 @@ class PortfolioCalculator:
             min_date = max(min_date, self.start_date)
             # Asegurar que siempre haya al menos la fecha de inicio
             if min_date > max_date:
+                max_date = min_date
+        
+        # Si se especifica una fecha de fin, usarla como máximo
+        if self.end_date is not None:
+            max_date = min(max_date, self.end_date)
+            # Asegurar que la fecha de fin no sea menor que la de inicio
+            if max_date < min_date:
                 max_date = min_date
         
         # Usar el rango de fechas más amplio posible
