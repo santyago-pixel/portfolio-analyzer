@@ -655,7 +655,7 @@ def main():
                         display_df.loc[idx, 'Cupones_Diarios'] = ops_dia[cupones_mask]['Monto'].sum()
                         
                         # Amortizaciones
-                        amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortizacion|amortization', na=False)
+                        amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortización|amortizacion|amortization', na=False)
                         display_df.loc[idx, 'Amortizaciones_Diarias'] = ops_dia[amort_mask]['Monto'].sum()
                         
                         # Dividendos
@@ -717,7 +717,7 @@ def main():
                             excel_df.loc[idx, 'Cupones_Diarios'] = ops_dia[cupones_mask]['Monto'].sum()
                             
                             # Amortizaciones
-                            amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortizacion|amortization', na=False)
+                            amort_mask = ops_dia['Tipo'].str.strip().str.lower().str.contains('amortización|amortizacion|amortization', na=False)
                             excel_df.loc[idx, 'Amortizaciones_Diarias'] = ops_dia[amort_mask]['Monto'].sum()
                             
                             # Dividendos
