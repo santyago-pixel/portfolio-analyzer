@@ -94,8 +94,8 @@ class PortfolioCalculator:
     
     def _get_initial_positions(self, start_date: pd.Timestamp) -> dict:
         """Obtener las posiciones iniciales a una fecha específica"""
-        # Obtener todas las operaciones hasta la fecha de inicio
-        ops_until_start = self.operaciones[self.operaciones['Fecha'] < start_date]
+        # Obtener todas las operaciones hasta la fecha de inicio (incluyendo el mismo día)
+        ops_until_start = self.operaciones[self.operaciones['Fecha'] <= start_date]
         
         positions = {}
         for _, op in ops_until_start.iterrows():
